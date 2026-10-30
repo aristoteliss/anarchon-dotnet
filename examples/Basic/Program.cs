@@ -3,20 +3,18 @@
 // Start this in three terminals: each run of "sync" runs on one of them. Stop the one running
 // "report" with Ctrl+C mid-run: it hands the run over, and another one finishes it as attempt 2.
 //
-//   dotnet run --project examples/Basic
-//
-// Connects to localhost:6379 unless REDIS_URL is set (a StackExchange.Redis configuration string).
+//   dotnet run --project examples/Basic                    # a SQLite file in the temp folder
+//   BACKEND=redis dotnet run --project examples/Basic      # see examples/Shared/Example.cs
 
 using Anarchon;
-using Anarchon.Redis;
 using Microsoft.Extensions.Logging;
+using static Anarchon.Examples.Example;
 
-var redis = Environment.GetEnvironmentVariable("REDIS_URL") ?? "localhost:6379";
 using var logging = LoggerFactory.Create(builder => builder.AddSimpleConsole(o => o.SingleLine = true).AddFilter("Anarchon", LogLevel.Debug));
 
 await using var scheduler = new Scheduler(new SchedulerOptions
 {
-    Backend = new RedisBackend(new RedisBackendOptions { Configuration = redis, Prefix = "example:cron:" }),
+    Backend = Backend("basic"),
     InstanceId = $"{Environment.MachineName}:{Environment.ProcessId}",
     Lease = TimeSpan.FromSeconds(6),
     Heartbeat = TimeSpan.FromSeconds(1),

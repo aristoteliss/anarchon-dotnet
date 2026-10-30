@@ -48,18 +48,19 @@ jobs:
 
   # The brokers have a job of their own, as in the Node.js package: the main test job skips them.
   brokers:
-    name: Tests on RabbitMQ
+    name: Tests on RabbitMQ and NATS
     runs-on: ubuntu-latest
     env:
-      REQUIRE_SERVERS: rabbitmq
+      REQUIRE_SERVERS: rabbitmq,nats
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           global-json-file: global.json
       - name: Start the brokers
-        run: docker compose -f test/docker-compose.test.yml --profile brokers up -d --wait rabbitmq
+        run: docker compose -f test/docker-compose.test.yml --profile brokers up -d --wait rabbitmq nats
       - run: dotnet test --project test/Anarchon.RabbitMQ.Tests -c Release
+      - run: dotnet test --project test/Anarchon.Nats.Tests -c Release
 
   package:
     name: Packages (NuGet)
@@ -69,7 +70,7 @@ jobs:
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           global-json-file: global.json
-      - run: dotnet pack -c Release -o packed # every project under src/
+      - run: for project in src/*/*.csproj; do dotnet pack "$project" -c Release -o packed; done
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: packages

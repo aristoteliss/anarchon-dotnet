@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Anarchon.Nats</RootNamespace>
+    <Description>NATS JetStream backend for Anarchon, on NATS.Net: JetStream message de-duplication decides which instance runs each time, and the Lease strategy adds backup runners, retries, catch-up and no overlapping runs through a key-value bucket.</Description>
+    <PackageTags>$(PackageTags);nats;jetstream</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Anarchon/Anarchon.csproj" />
+    <PackageReference Include="NATS.Client.KeyValueStore" />
+  </ItemGroup>
+</Project>

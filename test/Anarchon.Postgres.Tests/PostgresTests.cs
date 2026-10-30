@@ -132,6 +132,21 @@ public sealed class PostgresTests
         Assert.Equal(("host-1", true, RunReason.Manual), (history[0].InstanceId, history[0].IsManual, history[0].Reason));
     }
 
+    [Fact]
+    public void use_postgres_takes_a_connection_string_or_options()
+    {
+        var withString = new ServiceCollection();
+        withString.AddAnarchon().UsePostgres("Host=db;Database=app");
+        var withOptions = new ServiceCollection();
+        withOptions.AddAnarchon().UsePostgres(options => options.Table = "billing_runs");
+
+        using var first = withString.BuildServiceProvider();
+        using var second = withOptions.BuildServiceProvider();
+
+        Assert.Equal(("postgres", "postgres"), (first.GetRequiredService<Scheduler>().Backend.Name, second.GetRequiredService<Scheduler>().Backend.Name));
+        Assert.Throws<ArgumentException>(() => new ServiceCollection().AddAnarchon().UsePostgres(options => options.Table = "bad table").Services.BuildServiceProvider().GetRequiredService<Scheduler>());
+    }
+
     public sealed class Reports
     {
         [Cron("0 2 * * *", Name = "nightly-report")]

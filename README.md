@@ -3,7 +3,7 @@
 [![CI](https://github.com/aristoteliss/anarchon-dotnet/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/aristoteliss/anarchon-dotnet/actions/workflows/ci.yml)
 [![license](https://img.shields.io/badge/license-AGPL--3.0%20or%20commercial-blue.svg)](#license-and-commercial-use)
 
-Leaderless scheduling for .NET services, coordinated through the datastore you already run. Run the same jobs in every instance; an atomic claim in the store selects one runner for each scheduled slot. On Redis, Valkey, PostgreSQL and SQLite a lease lets another instance retry a run whose runner stopped renewing it; RabbitMQ only picks the runner. That gives at-least-once execution after failures, not exactly-once side effects: handlers should be idempotent, and a frozen runner can briefly overlap its replacement.
+Leaderless scheduling for .NET services, coordinated through the datastore you already run. Run the same jobs in every instance; an atomic claim in the store selects one runner for each scheduled slot. On Redis, Valkey, PostgreSQL, SQLite and NATS (`Lease`) a lease lets another instance retry a run whose runner stopped renewing it; RabbitMQ and NATS (`MsgId`) only pick the runner. That gives at-least-once execution after failures, not exactly-once side effects: handlers should be idempotent, and a frozen runner can briefly overlap its replacement.
 
 Anarchon also handles what goes wrong in real clusters:
 - jobs that run longer than their interval
@@ -38,6 +38,7 @@ dotnet add package Anarchon.Redis      # Redis or Valkey; brings in Anarchon, th
 dotnet add package Anarchon.Postgres   # or PostgreSQL
 dotnet add package Anarchon.Sqlite     # or a SQLite file, for the processes of one machine
 dotnet add package Anarchon.RabbitMQ   # or RabbitMQ: claim only, no leases
+dotnet add package Anarchon.Nats       # or NATS JetStream: claim only, or leases with NatsStrategy.Lease
 ```
 
 Targets .NET 10. Each backend is its own package with its own driver; see [Backends](#backends).
@@ -70,7 +71,7 @@ A job method returns `Task`, `ValueTask` or nothing, and takes any of `JobContex
 
 1. **Every instance computes the same run times.** Each scheduled run has a time, called its *slot*. Intervals use a grid counted from 1970 UTC, so "every 10 seconds" means :00, :10, :20…. Cron jobs use the expression. All instances agree on the slots, whenever each one started.
 2. **Each instance waits a random delay.** It waits until the slot plus a random 0 to `Jitter` (default 2 s). The delay is what spreads the work across instances.
-3. **One atomic claim decides.** Each instance sends the same claim, which records the run unless it's already there: a Lua script in Redis, a short transaction in PostgreSQL and SQLite. The store decides claims of a run one at a time, so exactly one instance wins.
+3. **One atomic claim decides.** Each instance sends the same claim, which records the run unless it's already there: a Lua script in Redis, a short transaction in PostgreSQL and SQLite, a write at a known revision in a NATS key-value bucket. The store decides claims of a run one at a time, so exactly one instance wins.
 4. **The winner runs the job under a lease.** It renews the lease every few seconds, and the other instances become its backups.
 
 ```
@@ -152,13 +153,15 @@ A value that can't be used throws `ArgumentException` or `ArgumentOutOfRangeExce
 
 ## Backends
 
-Redis, Valkey, PostgreSQL and SQLite get everything described above: leases, backups, no overlap, catch-up and hand-over on `StopAsync()`. RabbitMQ only makes sure one instance wins each run, like the simple `StreamId` claim: it can't hold a lease that a backup could check.
+Redis, Valkey, PostgreSQL, SQLite and NATS with `NatsStrategy.Lease` get everything described above: leases, backups, no overlap, catch-up and hand-over on `StopAsync()`. RabbitMQ, and NATS with its default `MsgId` strategy, only make sure one instance wins each run, like the simple `StreamId` claim: they can't hold a lease that a backup could check.
 
 ```csharp
 new Scheduler(new SchedulerOptions { Backend = new RedisBackend("localhost:6379") });
 new Scheduler(new SchedulerOptions { Backend = new PostgresBackend("Host=db;Database=app;Username=app;Password=...") });
 new Scheduler(new SchedulerOptions { Backend = new SqliteBackend("Data Source=/var/lib/myapp/jobs.db") });
 new Scheduler(new SchedulerOptions { Backend = new RabbitMQBackend("amqp://rabbit.internal") });
+new Scheduler(new SchedulerOptions { Backend = new NatsBackend("nats://nats.internal:4222") });
+new Scheduler(new SchedulerOptions { Backend = new NatsBackend(new NatsBackendOptions { ConnectionString = "nats://nats.internal:4222", Strategy = NatsStrategy.Lease }) });
 ```
 
 | Package | How one instance wins | Leases, backups, catch-up | Needs |
@@ -167,8 +170,10 @@ new Scheduler(new SchedulerOptions { Backend = new RabbitMQBackend("amqp://rabbi
 | `Anarchon.Postgres` | One short transaction per claim. Its first statement writes the job's row in `<table>_jobs`, so claims of one job take turns | Yes | PostgreSQL 9.5+; Npgsql |
 | `Anarchon.Sqlite` | One `BEGIN IMMEDIATE` transaction per claim; SQLite has one writer at a time | Yes | SQLite 3.24+ (bundled with Microsoft.Data.Sqlite) |
 | `Anarchon.RabbitMQ` | A gate queue per run that holds one message (`x-max-length: 1`, `reject-publish`); publisher confirms say who was first | No | RabbitMQ 3.9+; RabbitMQ.Client |
+| `Anarchon.Nats` (`MsgId`, the default) | JetStream publish with `Nats-Msg-Id: <job>:<slot>`; repeats come back as duplicates | No | JetStream enabled; NATS.Net |
+| `Anarchon.Nats` (`Lease`) | A write to the job's key in the key-value bucket `<stream>_RUNS`, only at the revision that was read; a refused write is decided again | Yes | nats-server 2.10+ with JetStream; NATS.Net |
 
-With a host, `UseRedis(...)`, `UsePostgres(...)`, `UseSqlite(...)` or `UseRabbitMQ(...)` picks the backend: a connection string, a lambda that sets the options, or one that also gets the app's services, to share a connection or data source the app registered:
+With a host, `UseRedis(...)`, `UsePostgres(...)`, `UseSqlite(...)`, `UseRabbitMQ(...)` or `UseNats(...)` picks the backend: a connection string, a lambda that sets the options, or one that also gets the app's services, to share a connection or data source the app registered:
 
 ```csharp
 builder.Services.AddNpgsqlDataSource(builder.Configuration.GetConnectionString("postgres")!); // Npgsql.DependencyInjection
@@ -197,6 +202,16 @@ A SQLite file only coordinates the processes that open that same file: one machi
 - **Limits.** RabbitMQ remembers a run for `SlotTtl`, so a job's `Jitter` plus `MaxLate` must be shorter; a job that breaks this is refused with `UnsafeJob`. Job names may only use letters, digits, `_` and `-`, since they become queue names. History is kept by count only, so `HistoryTtl` is refused with `Unsupported`.
 - **Failures.** A claim whose answer is lost (the connection dropped mid-publish) fails, so that instance skips the run rather than risk running it twice. A connection or channel that closed is opened again on the next call. The backend's own connection is named `anarchon:<prefix>` in the management UI.
 
+### NATS
+
+`NatsBackendOptions` takes a NATS URL (or several, comma-separated) as `ConnectionString` (default `nats://localhost:4222`; the backend opens the connection and closes it on stop) or a `Connection` your app already has (`INatsConnection`, never closed by Anarchon), the `Strategy` (`MsgId` by default, or `Lease`), a `Stream` (default `CRON`, created on start), a `Prefix` for subjects (default `cron.`), a `DuplicateWindow` (default 5 minutes), a `HistorySize` and `Replicas`.
+
+- **History.** Claims and results go to `<prefix><job>.claims` and `<prefix><job>.results` in the stream, which keeps the largest `HistorySize` of the backend and its jobs, per subject. `HistoryTtl` is refused with `Unsupported`.
+- **`MsgId`.** JetStream remembers a claimed run for `DuplicateWindow`, so a job's `Jitter` plus `MaxLate` must be shorter (`UnsafeJob` otherwise).
+- **`Lease`.** Each job's runs are one key in the key-value bucket `<stream>_RUNS`; the stream name may then only use letters, digits, `_` and `-`. Leases use the NATS server's clock (nats-server 2.10+). A run is remembered while a late claim could still ask for it, as with the other lease backends.
+- **Names.** Job names may only use letters, digits, `_` and `-`, since they become subjects.
+- **Clusters.** Set `Replicas = 3` so the stream, and its memory of claimed runs, survives the loss of a server. A new bucket of runs gets the same number.
+
 ### The SQL lease store
 
 The SQL lease store is in the package `Anarchon.Sql` (an abstract `SqlBackend` and a `SqlDialect`), which `Anarchon.Postgres` and `Anarchon.Sqlite` bring in. Reference it directly only to put Anarchon on another database.
@@ -218,7 +233,7 @@ With `Lease`, each job has these keys, all with one hash tag so Redis Cluster ke
 
 ## Running next to the Node.js package
 
-Each backend writes the same data as the Node.js package (the same Redis keys and Lua scripts, the same SQL tables and columns in PostgreSQL and SQLite, the same RabbitMQ queues and records), so .NET and Node.js instances can share jobs during a migration, or for good. With the same `Prefix` or `Table`, strategy and job names, each run still has one runner, either side can take over a run the other one left, and `HistoryAsync()` shows the runs of both. Interval jobs compute the same slots on both sides. Cron jobs use Cronos here and croner in Node.js; check unusual expressions on both before you mix them.
+Each backend writes the same data as the Node.js package (the same Redis keys and Lua scripts, the same SQL tables and columns in PostgreSQL and SQLite, the same RabbitMQ queues, NATS subjects and bucket keys, and the same records), so .NET and Node.js instances can share jobs during a migration, or for good. With the same `Prefix` or `Table`, strategy and job names, each run still has one runner, either side can take over a run the other one left, and `HistoryAsync()` shows the runs of both. Interval jobs compute the same slots on both sides. Cron jobs use Cronos here and croner in Node.js; check unusual expressions on both before you mix them.
 
 Coming from the Node.js API:
 
@@ -242,12 +257,32 @@ Coming from the Node.js API:
 
 ## Examples
 
+Every example runs on a SQLite file in the temp folder unless `BACKEND` names another store (`redis`, `postgres`, `sqlite`, `nats`, `rabbitmq`; see `examples/Shared/Example.cs` for their variables), so most need no server. `.vscode/launch.json` has a debug configuration for each; start with "Example: Walkthrough", which stops before `StartAsync()` and lists where to step.
+
 ```sh
-dotnet run --project examples/Basic     # a console app; start it in three terminals, then Ctrl+C the one running "report"
-dotnet run --project examples/Hosting   # a worker service with attribute jobs and dependency injection
+dotnet run --project examples/QuickStart        # 3 processes: a graceful stop, a crash (Process.Kill), then downtime and catch-up
+dotnet run --project examples/Basic             # run it in 3 terminals, then Ctrl+C the one running "report"
+dotnet run --project examples/Hosting           # a worker service: attribute jobs, dependency injection, Redis from configuration
+dotnet run --project examples/HttpApi           # ASP.NET Core: GET /jobs, /jobs/{name}/runs, POST /jobs/{name}/run (HttpApi.http has every request)
+dotnet run --project examples/Walkthrough       # one run from the timer to history, made for stepping through in a debugger
+dotnet run --project examples/Failover          # 3 instances in one process: a graceful hand-over, then a crash and a takeover
+dotnet run --project examples/OptionsAndEvents  # every job option and every event
+dotnet run --project examples/RunData           # run data: the scheduler's, a job's, a provider read at each run, RunNowAsync and SetData
+dotnet run --project examples/Attributes        # [Cron], [Every] and [At] without a host: Register with a prefix, a time zone and defaults
+dotnet run --project examples/OwnClients        # your own IConnectionMultiplexer, or NpgsqlDataSource with BACKEND=postgres
 ```
 
-Both connect to Redis on `localhost:6379`: `REDIS_URL` for Basic, `ConnectionStrings__redis` for Hosting.
+Real-life setups, each a situation solved with a different set of options (the header of each file explains every choice):
+
+```sh
+dotnet run --project examples/Billing              # charge once a day: never twice (MaxAttempts 1), caught up after an outage (CatchUp)
+dotnet run --project examples/CacheRefresh         # a cheap refresh every 3 s on 3 instances: jitter, a short MaxLate, no catch-up
+dotnet run --project examples/NightlyExport        # a long export interrupted by a deploy, resumed from a checkpoint by another instance
+dotnet run --project examples/Tenants              # per-tenant jobs and time zones, a fresh token per run, tenants added and removed live
+BACKEND=nats STRATEGY=msg-id dotnet run --project examples/BrokerNotifications   # NATS or RabbitMQ, no leases: each run sends everything outstanding
+```
+
+`Hosting` and `OwnClients` need Redis (or Postgres for `OwnClients`), and `BrokerNotifications` a broker; the others need nothing.
 
 ## Tests
 
@@ -255,7 +290,7 @@ The tests run against real servers, and a server that isn't running is skipped. 
 
 ```sh
 docker compose -f test/docker-compose.test.yml up -d --wait   # Redis 8.6, Redis 7.0, Valkey, PostgreSQL 16
-docker compose -f test/docker-compose.test.yml --profile brokers up -d --wait   # also RabbitMQ
+docker compose -f test/docker-compose.test.yml --profile brokers up -d --wait   # also RabbitMQ and NATS
 dotnet test                                                    # every test
 docker compose -f test/docker-compose.test.yml --profile brokers down   # remove them and their data
 ```
@@ -268,10 +303,13 @@ docker compose -f test/docker-compose.test.yml --profile brokers down   # remove
 | PostgreSQL 16 | `Host=localhost;Port=5433;Username=postgres;Password=postgres;Database=anarchon_test` | `POSTGRES_URL` (an Npgsql connection string) |
 | SQLite (no server: one file per test) | the temporary folder | `SQLITE_DIR` |
 | RabbitMQ 3.13 (profile `brokers`) | `amqp://localhost:5672`, management on `http://localhost:15672` | `RABBITMQ_URL`, `RABBITMQ_MANAGEMENT_URL` |
+| NATS 2.11 with JetStream (profile `brokers`) | `nats://localhost:4222` | `NATS_URL` |
 
-To make a run fail when a server is missing, instead of skipping its tests, name the servers in `REQUIRE_SERVERS`: `REQUIRE_SERVERS=redis,redis-7,valkey,postgres,rabbitmq dotnet test`. CI sets it; RabbitMQ runs in a CI job of its own.
+To make a run fail when a server is missing, instead of skipping its tests, name the servers in `REQUIRE_SERVERS`: `REQUIRE_SERVERS=redis,redis-7,valkey,postgres,rabbitmq,nats dotnet test`. CI sets it; RabbitMQ and NATS run in a CI job of their own.
 
-This covers, for every backend and each Redis strategy and server: a race where three clients fight over 40 runs, retry-safety and history. For every backend with leases: the lease state machine step by step, and schedulers racing on one store, with hand-over on stop, takeover after a lost lease, and catch-up. These shared tests live in `test/Anarchon.Specification`, and each backend's test project inherits them. `test/Anarchon.Sql.Tests` and `test/Anarchon.Sqlite.Tests` run them on SQLite files, so they need no server.
+This covers, for every backend and each Redis strategy and server: a race where three clients fight over 40 runs, retry-safety and history. For every backend with leases: the lease state machine step by step, and schedulers racing on one store, with hand-over on stop, takeover after a lost lease or a failed hand-over, heartbeats keeping a long run, `YieldAfterFailure`, overlap backups and catch-up. These shared tests live in `test/Anarchon.Specification`, and each backend's test project inherits them. `test/Anarchon.Sql.Tests` and `test/Anarchon.Sqlite.Tests` run them on SQLite files, so they need no server.
+
+Coverage: `dotnet test -- --coverage --coverage-output-format cobertura` writes a Cobertura report per test project.
 
 ## Credits
 

@@ -12,11 +12,11 @@ You need the .NET 10 SDK and Docker.
 
 ```sh
 docker compose -f test/docker-compose.test.yml up -d --wait   # Redis 8.6, Redis 7.0, Valkey, PostgreSQL 16
-docker compose -f test/docker-compose.test.yml --profile brokers up -d --wait   # also RabbitMQ
+docker compose -f test/docker-compose.test.yml --profile brokers up -d --wait   # also RabbitMQ and NATS
 ```
 
 The tests run against real servers. A server that isn't running skips its tests, so name the
-servers a run must have: `REQUIRE_SERVERS=redis,redis-7,valkey,postgres,rabbitmq dotnet test`. The README's
+servers a run must have: `REQUIRE_SERVERS=redis,redis-7,valkey,postgres,rabbitmq,nats dotnet test`. The README's
 [Tests](README.md#tests) section lists the servers, their addresses and the variables that
 override them.
 

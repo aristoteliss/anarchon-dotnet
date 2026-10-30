@@ -49,3 +49,13 @@ services:
       test: ['CMD', 'rabbitmq-diagnostics', '-q', 'check_port_connectivity']
       interval: 5s
       retries: 20
+
+  nats:
+    image: nats:2.11-alpine
+    profiles: [brokers]
+    command: ['-js', '-m', '8222']
+    ports: ['127.0.0.1:4222:4222', '127.0.0.1:8222:8222']
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '-', 'http://localhost:8222/healthz']
+      interval: 2s
+      retries: 15

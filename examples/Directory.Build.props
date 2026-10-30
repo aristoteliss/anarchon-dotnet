@@ -6,6 +6,16 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <OutputType>Exe</OutputType>
     <!-- Examples are scripts: plain logging calls and console output read best there. -->
-    <NoWarn>$(NoWarn);CS1591;CA1515;CA2007;CA1303;CA1812;CA1848;CA1873</NoWarn>
+    <NoWarn>$(NoWarn);CS1591;CA1515;CA2007;CA1303;CA1812;CA1848;CA1873;CA1861</NoWarn>
   </PropertyGroup>
+
+  <!-- Every example can run on every backend (BACKEND=...), through Shared/Example.cs. -->
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)Shared/*.cs" Link="Shared/%(Filename)%(Extension)" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../src/Anarchon.Redis/Anarchon.Redis.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../src/Anarchon.Postgres/Anarchon.Postgres.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../src/Anarchon.Sqlite/Anarchon.Sqlite.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../src/Anarchon.RabbitMQ/Anarchon.RabbitMQ.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../src/Anarchon.Nats/Anarchon.Nats.csproj" />
+  </ItemGroup>
 </Project>

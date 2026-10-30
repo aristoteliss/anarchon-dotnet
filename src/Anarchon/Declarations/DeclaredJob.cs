@@ -107,11 +107,11 @@ internal sealed class DeclaredJob
         where T : JobOptions
     {
         var a = _attribute;
-        options.Jitter = Parse(a.Jitter) ?? defaults?.Jitter;
+        options.Jitter = ParseZeroOrMore(a.Jitter) ?? defaults?.Jitter;
         options.MaxLate = Parse(a.MaxLate) ?? defaults?.MaxLate;
         options.Timeout = Parse(a.Timeout) ?? defaults?.Timeout;
         options.HistoryTtl = Parse(a.HistoryTtl) ?? defaults?.HistoryTtl;
-        options.CatchUp = Parse(a.CatchUp) ?? defaults?.CatchUp;
+        options.CatchUp = ParseZeroOrMore(a.CatchUp) ?? defaults?.CatchUp;
         options.HistorySize = a.HistorySizeSetting ?? defaults?.HistorySize;
         options.MaxAttempts = a.MaxAttemptsSetting ?? defaults?.MaxAttempts;
         options.YieldAfterFailure = a.YieldAfterFailureSetting ?? defaults?.YieldAfterFailure;
@@ -120,6 +120,15 @@ internal sealed class DeclaredJob
     }
 
     private static TimeSpan? Parse(string? duration) => duration is null ? null : Duration.Parse(duration);
+
+    /// <summary>A duration for an option where zero means "none" (Jitter, CatchUp): <c>"0"</c> or zero of one unit, such as <c>"0s"</c>.</summary>
+    private static TimeSpan? ParseZeroOrMore(string? duration) => duration is null ? null : IsZero(duration) ? TimeSpan.Zero : Duration.Parse(duration);
+
+    private static bool IsZero(string duration)
+    {
+        var number = duration.Trim().TrimEnd('d', 'h', 'm', 's').Trim();
+        return number.Length > 0 && number.All(c => c is '0' or '.') && number.Count(c => c == '.') <= 1;
+    }
 
     private static long ParseWhen(string when) =>
         DateTimeOffset.Parse(when, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal).ToUnixTimeMilliseconds();

@@ -20,16 +20,26 @@ internal sealed class MemoryBackend(MemoryBackend.Store store) : IBackend
 
     public int Closes { get; private set; }
 
+    /// <summary>When set, every claim throws it, as a store that went away does.</summary>
+    public Exception? ClaimFailure { get; set; }
+
+    /// <summary>When set, connecting throws it, as an unreachable store does.</summary>
+    public Exception? InitFailure { get; set; }
+
+    /// <summary>When set, closing throws it.</summary>
+    public Exception? CloseFailure { get; set; }
+
     public Task InitAsync(CancellationToken cancellationToken)
     {
         Inits++;
-        return Task.CompletedTask;
+        return InitFailure is { } failure ? Task.FromException(failure) : Task.CompletedTask;
     }
 
     public Task PrepareJobAsync(string job, int historySize, CancellationToken cancellationToken) => Task.CompletedTask;
 
     public Task<bool> ClaimAsync(ClaimInput input, CancellationToken cancellationToken)
     {
+        if (ClaimFailure is { } failure) return Task.FromException<bool>(failure);
         lock (store)
         {
             var first = store.Claims.TryAdd((input.Job, input.Slot), input) ? input : store.Claims[(input.Job, input.Slot)];
@@ -72,7 +82,7 @@ internal sealed class MemoryBackend(MemoryBackend.Store store) : IBackend
     public Task CloseAsync()
     {
         Closes++;
-        return Task.CompletedTask;
+        return CloseFailure is { } failure ? Task.FromException(failure) : Task.CompletedTask;
     }
 
     private static ClaimRecord ToClaim(ClaimInput input, bool manual) =>

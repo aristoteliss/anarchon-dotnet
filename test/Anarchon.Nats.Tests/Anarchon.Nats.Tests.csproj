@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../../src/Anarchon.Nats/Anarchon.Nats.csproj" />
+    <ProjectReference Include="../Anarchon.Specification/Anarchon.Specification.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+  </ItemGroup>
+</Project>

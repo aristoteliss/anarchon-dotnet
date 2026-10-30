@@ -30,7 +30,7 @@ public abstract class JobAttribute : Attribute
     /// <summary>The job's name. Default <c>Type-Method</c>.</summary>
     public string? Name { get; set; }
 
-    /// <summary>See <see cref="JobOptions.Jitter"/>.</summary>
+    /// <summary>See <see cref="JobOptions.Jitter"/>. <c>"0"</c> or <c>"0s"</c>: no jitter.</summary>
     public string? Jitter { get; set; }
 
     /// <summary>See <see cref="JobOptions.MaxLate"/>.</summary>
@@ -42,7 +42,7 @@ public abstract class JobAttribute : Attribute
     /// <summary>See <see cref="JobOptions.HistoryTtl"/>.</summary>
     public string? HistoryTtl { get; set; }
 
-    /// <summary>See <see cref="JobOptions.CatchUp"/>.</summary>
+    /// <summary>See <see cref="JobOptions.CatchUp"/>. <c>"0"</c> or <c>"0s"</c>: no catch-up.</summary>
     public string? CatchUp { get; set; }
 
     /// <summary>See <see cref="JobOptions.HistorySize"/>.</summary>

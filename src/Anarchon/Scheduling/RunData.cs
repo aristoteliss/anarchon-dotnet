@@ -22,15 +22,6 @@ internal static class RunData
         return data;
     }
 
-    /// <summary>Two sources as one, the second on top of the first.</summary>
-    public static object? Layer(object? general, object? specific)
-    {
-        if (general is null) return specific;
-        if (specific is null) return general;
-
-        return new JobDataProvider(run => ResolveAsync([general, specific], run));
-    }
-
     /// <summary>More specific data on top of more general data: two dictionaries are merged, anything else replaces.</summary>
     private static object? Merge(object? general, object? specific)
     {

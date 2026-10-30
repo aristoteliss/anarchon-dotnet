@@ -61,6 +61,30 @@ public sealed class DeclarationTests
     }
 
     [Fact]
+    public void zero_turns_off_jitter_and_catch_up_in_an_attribute_and_is_refused_where_a_duration_must_be_positive()
+    {
+        var scheduler = new Scheduler(new SchedulerOptions { Backend = new LeaseBackendStub() });
+
+        scheduler.Register(new ZeroSettings());
+        var timeout = Assert.Throws<ArgumentException>(() => scheduler.Register(new ZeroTimeout()));
+
+        Assert.Equal(["no-catch-up", "no-jitter"], scheduler.GetJobs().Select(job => job.Name).Order());
+        Assert.Contains("Invalid duration \"0s\": it must be at least 1 ms", timeout.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void attribute_settings_read_back_what_was_set_and_their_defaults_when_not_set()
+    {
+        var set = new EveryAttribute("1m") { HistorySize = 5, MaxAttempts = 2, YieldAfterFailure = true, Overlap = OverlapPolicy.Allow, Offset = "10s" };
+        var unset = new CronAttribute("0 * * * *");
+        var at = new AtAttribute("2026-01-01T00:00:00Z") { Name = "once" };
+
+        Assert.Equal((5, 2, true, OverlapPolicy.Allow, "1m", "10s"), (set.HistorySize, set.MaxAttempts, set.YieldAfterFailure, set.Overlap, set.Interval, set.Offset));
+        Assert.Equal((0, 0, false, OverlapPolicy.Skip, "0 * * * *"), (unset.HistorySize, unset.MaxAttempts, unset.YieldAfterFailure, unset.Overlap, unset.Expression));
+        Assert.Equal(("2026-01-01T00:00:00Z", "once"), (at.When, at.Name));
+    }
+
+    [Fact]
     public async Task with_a_host_add_anarchon_starts_the_scheduler_and_each_run_gets_its_own_scope()
     {
         var builder = Host.CreateApplicationBuilder();
@@ -124,6 +148,21 @@ public sealed class DeclarationTests
     {
         [Every("1m")]
         public Task Run(string name) => Task.CompletedTask;
+    }
+
+    public sealed class ZeroSettings
+    {
+        [Every("10s", Name = "no-jitter", Jitter = "0s")]
+        public Task NoJitter() => Task.CompletedTask;
+
+        [Every("10s", Name = "no-catch-up", CatchUp = "0", Jitter = "0.0ms")]
+        public Task NoCatchUp() => Task.CompletedTask;
+    }
+
+    public sealed class ZeroTimeout
+    {
+        [Every("10s", Timeout = "0s")]
+        public Task Run() => Task.CompletedTask;
     }
 
     public sealed class WrongSetting

@@ -6,6 +6,7 @@
     <Project Path="src/Anarchon.Postgres/Anarchon.Postgres.csproj" />
     <Project Path="src/Anarchon.Sqlite/Anarchon.Sqlite.csproj" />
     <Project Path="src/Anarchon.RabbitMQ/Anarchon.RabbitMQ.csproj" />
+    <Project Path="src/Anarchon.Nats/Anarchon.Nats.csproj" />
   </Folder>
   <Folder Name="/test/">
     <Project Path="test/Anarchon.Tests/Anarchon.Tests.csproj" />
@@ -15,9 +16,23 @@
     <Project Path="test/Anarchon.Postgres.Tests/Anarchon.Postgres.Tests.csproj" />
     <Project Path="test/Anarchon.Sqlite.Tests/Anarchon.Sqlite.Tests.csproj" />
     <Project Path="test/Anarchon.RabbitMQ.Tests/Anarchon.RabbitMQ.Tests.csproj" />
+    <Project Path="test/Anarchon.Nats.Tests/Anarchon.Nats.Tests.csproj" />
   </Folder>
   <Folder Name="/examples/">
+    <Project Path="examples/QuickStart/QuickStart.csproj" />
     <Project Path="examples/Basic/Basic.csproj" />
     <Project Path="examples/Hosting/Hosting.csproj" />
+    <Project Path="examples/HttpApi/HttpApi.csproj" />
+    <Project Path="examples/Walkthrough/Walkthrough.csproj" />
+    <Project Path="examples/Failover/Failover.csproj" />
+    <Project Path="examples/OptionsAndEvents/OptionsAndEvents.csproj" />
+    <Project Path="examples/RunData/RunData.csproj" />
+    <Project Path="examples/Attributes/Attributes.csproj" />
+    <Project Path="examples/OwnClients/OwnClients.csproj" />
+    <Project Path="examples/Billing/Billing.csproj" />
+    <Project Path="examples/CacheRefresh/CacheRefresh.csproj" />
+    <Project Path="examples/NightlyExport/NightlyExport.csproj" />
+    <Project Path="examples/Tenants/Tenants.csproj" />
+    <Project Path="examples/BrokerNotifications/BrokerNotifications.csproj" />
   </Folder>
 </Solution>

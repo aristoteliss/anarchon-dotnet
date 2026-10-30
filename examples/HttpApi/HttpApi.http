@@ -1,0 +1,63 @@
+### Requests for examples/HttpApi, for Visual Studio, Rider, or VS Code with the REST Client extension.
+###
+### 1. Start the API:   dotnet run --project examples/HttpApi      (or F5: "Example: HttpApi (ASP.NET Core)")
+### 2. Send any request below.
+###
+### For a second instance:   PORT=3001 dotnet run --project examples/HttpApi
+### Both share the same store, so /runs on either one shows the runs of both.
+
+@baseUrl = http://localhost:3000
+@second = http://localhost:3001
+@job = sync
+
+### Jobs registered on this instance, with their schedule and next run
+GET {{baseUrl}}/jobs
+
+### Latest runs of a job, from all instances, newest first (default limit 20)
+GET {{baseUrl}}/jobs/{{job}}/runs
+
+### The same, only the last 3
+GET {{baseUrl}}/jobs/{{job}}/runs?limit=3
+
+### The latest run: who ran it, when, and how it ended
+GET {{baseUrl}}/jobs/{{job}}/last
+
+### Run the job now on this instance. Answers when the job has finished, with its record ("isManual": true)
+POST {{baseUrl}}/jobs/{{job}}/run
+
+### The manual run is now the first record in the history
+GET {{baseUrl}}/jobs/{{job}}/runs?limit=1
+
+### The cron job: scheduled every 2 hours (Athens time), so its history is empty until you run it
+GET {{baseUrl}}/jobs/digest/runs
+
+###
+POST {{baseUrl}}/jobs/digest/run
+
+###
+GET {{baseUrl}}/jobs/digest/last
+
+### --- Second instance (start it with PORT=3001 first) ---
+
+### Its jobs: the same names and the same next run times as the first instance
+GET {{second}}/jobs
+
+### History is shared: this lists runs made by api-3000 and api-3001
+GET {{second}}/jobs/{{job}}/runs?limit=10
+
+### A manual run on the second instance; "instanceId" in the answer is api-3001
+POST {{second}}/jobs/{{job}}/run
+
+### --- Errors ---
+
+### 400: a job that is not registered cannot be run
+POST {{baseUrl}}/jobs/nope/run
+
+### 400: limit must be at least 1
+GET {{baseUrl}}/jobs/{{job}}/runs?limit=0
+
+### History can be read for any name; an unknown job simply has none: []
+GET {{baseUrl}}/jobs/nope/runs
+
+### ... and no latest run: null
+GET {{baseUrl}}/jobs/nope/last

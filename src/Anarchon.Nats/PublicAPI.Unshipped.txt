@@ -1,0 +1,41 @@
+#nullable enable
+Anarchon.Nats.NatsBackend
+Anarchon.Nats.NatsBackend.CheckJob(Anarchon.Backends.JobLimits! job) -> void
+Anarchon.Nats.NatsBackend.ClaimAsync(Anarchon.Backends.ClaimInput! input, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!
+Anarchon.Nats.NatsBackend.CloseAsync() -> System.Threading.Tasks.Task!
+Anarchon.Nats.NatsBackend.DedupeWindow.get -> System.TimeSpan
+Anarchon.Nats.NatsBackend.HistoryAsync(string! job, int limit, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Anarchon.RunRecord!>!>!
+Anarchon.Nats.NatsBackend.InitAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Anarchon.Nats.NatsBackend.Name.get -> string!
+Anarchon.Nats.NatsBackend.NatsBackend(Anarchon.Nats.NatsBackendOptions! options) -> void
+Anarchon.Nats.NatsBackend.NatsBackend(string! connectionString) -> void
+Anarchon.Nats.NatsBackend.PrepareJobAsync(string! job, int historySize, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Anarchon.Nats.NatsBackend.RecordManualRunAsync(Anarchon.Backends.ClaimInput! input, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<long?>!
+Anarchon.Nats.NatsBackend.Runs.get -> Anarchon.Backends.IRunStore?
+Anarchon.Nats.NatsBackend.SaveResultAsync(string! job, Anarchon.Backends.StoredResult! result, int historySize, System.TimeSpan? historyTtl, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Anarchon.Nats.NatsBackend.Strategy.get -> Anarchon.Nats.NatsStrategy
+Anarchon.Nats.NatsBackendOptions
+Anarchon.Nats.NatsBackendOptions.Connection.get -> NATS.Client.Core.INatsConnection?
+Anarchon.Nats.NatsBackendOptions.Connection.set -> void
+Anarchon.Nats.NatsBackendOptions.ConnectionString.get -> string?
+Anarchon.Nats.NatsBackendOptions.ConnectionString.set -> void
+Anarchon.Nats.NatsBackendOptions.DuplicateWindow.get -> System.TimeSpan
+Anarchon.Nats.NatsBackendOptions.DuplicateWindow.set -> void
+Anarchon.Nats.NatsBackendOptions.HistorySize.get -> int
+Anarchon.Nats.NatsBackendOptions.HistorySize.set -> void
+Anarchon.Nats.NatsBackendOptions.NatsBackendOptions() -> void
+Anarchon.Nats.NatsBackendOptions.Prefix.get -> string!
+Anarchon.Nats.NatsBackendOptions.Prefix.set -> void
+Anarchon.Nats.NatsBackendOptions.Replicas.get -> int?
+Anarchon.Nats.NatsBackendOptions.Replicas.set -> void
+Anarchon.Nats.NatsBackendOptions.Strategy.get -> Anarchon.Nats.NatsStrategy
+Anarchon.Nats.NatsBackendOptions.Strategy.set -> void
+Anarchon.Nats.NatsBackendOptions.Stream.get -> string!
+Anarchon.Nats.NatsBackendOptions.Stream.set -> void
+Anarchon.Nats.NatsStrategy
+Anarchon.Nats.NatsStrategy.Lease = 1 -> Anarchon.Nats.NatsStrategy
+Anarchon.Nats.NatsStrategy.MsgId = 0 -> Anarchon.Nats.NatsStrategy
+Microsoft.Extensions.DependencyInjection.NatsAnarchonBuilderExtensions
+static Microsoft.Extensions.DependencyInjection.NatsAnarchonBuilderExtensions.UseNats(this Anarchon.AnarchonBuilder! builder, string! connectionString) -> Anarchon.AnarchonBuilder!
+static Microsoft.Extensions.DependencyInjection.NatsAnarchonBuilderExtensions.UseNats(this Anarchon.AnarchonBuilder! builder, System.Action<Anarchon.Nats.NatsBackendOptions!>! configure) -> Anarchon.AnarchonBuilder!
+static Microsoft.Extensions.DependencyInjection.NatsAnarchonBuilderExtensions.UseNats(this Anarchon.AnarchonBuilder! builder, System.Action<System.IServiceProvider!, Anarchon.Nats.NatsBackendOptions!>! configure) -> Anarchon.AnarchonBuilder!

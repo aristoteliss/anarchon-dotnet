@@ -20,6 +20,8 @@
 
   <ItemGroup Condition="'$(IsTestExecutable)' == 'true'">
     <PackageReference Include="xunit.v3" />
+    <!-- Coverage of a run: add the options coverage and coverage-output-format cobertura after the separator of dotnet test. -->
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(IsTestExecutable)' != 'true'">
