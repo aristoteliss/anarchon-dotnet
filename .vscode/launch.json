@@ -1,0 +1,24 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Example: Basic (console, Redis)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/examples/Basic/bin/Debug/net10.0/Basic.dll",
+      "cwd": "${workspaceFolder}",
+      "env": { "REDIS_URL": "localhost:6379" },
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Example: Hosting (worker service, Redis)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/examples/Hosting/bin/Debug/net10.0/Hosting.dll",
+      "cwd": "${workspaceFolder}/examples/Hosting",
+      "console": "integratedTerminal"
+    }
+  ]
+}

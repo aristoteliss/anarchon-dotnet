@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+# REQUIRE_SERVERS makes a run fail when a server it names doesn't answer. Without it a missing
+# server only skips its tests (test/Anarchon.Specification/TestStore.cs, RequiredServers).
+jobs:
+  checks:
+    name: Format, build, public API
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - run: dotnet restore
+      - run: dotnet format --verify-no-changes --no-restore
+      - run: dotnet build --no-restore -c Release
+
+  test:
+    name: Tests on Redis 8.6, Redis 7.0, Valkey, PostgreSQL 16
+    runs-on: ubuntu-latest
+    env:
+      REQUIRE_SERVERS: redis,redis-7,valkey,postgres
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - name: Start the test servers
+        run: docker compose -f test/docker-compose.test.yml up -d --wait
+      - run: dotnet test -c Release
+
+  # The brokers have a job of their own, as in the Node.js package: the main test job skips them.
+  brokers:
+    name: Tests on RabbitMQ
+    runs-on: ubuntu-latest
+    env:
+      REQUIRE_SERVERS: rabbitmq
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - name: Start the brokers
+        run: docker compose -f test/docker-compose.test.yml --profile brokers up -d --wait rabbitmq
+      - run: dotnet test --project test/Anarchon.RabbitMQ.Tests -c Release
+
+  package:
+    name: Packages (NuGet)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - run: dotnet pack -c Release -o packed # every project under src/
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: packages
+          path: packed/*nupkg
+          if-no-files-found: error

@@ -1,0 +1,22 @@
+version: 2
+updates:
+  # The workflows pin each action to a commit; this keeps the pins current.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']
+
+  # Versions live in Directory.Packages.props. Cronos decides run times: review its major
+  # updates as breaking changes (CONTRIBUTING.md, Compatibility).
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      microsoft-extensions:
+        patterns: ['Microsoft.Extensions.*']
+      tests:
+        patterns: ['xunit*']

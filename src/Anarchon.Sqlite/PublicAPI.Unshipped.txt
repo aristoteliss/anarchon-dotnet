@@ -1,0 +1,15 @@
+#nullable enable
+Anarchon.Sqlite.SqliteBackend
+Anarchon.Sqlite.SqliteBackend.SqliteBackend(Anarchon.Sqlite.SqliteBackendOptions! options) -> void
+Anarchon.Sqlite.SqliteBackend.SqliteBackend(string! connectionString) -> void
+Anarchon.Sqlite.SqliteBackendOptions
+Anarchon.Sqlite.SqliteBackendOptions.ConnectionString.get -> string!
+Anarchon.Sqlite.SqliteBackendOptions.ConnectionString.set -> void
+Anarchon.Sqlite.SqliteBackendOptions.SqliteBackendOptions() -> void
+Anarchon.Sqlite.SqliteBackendOptions.Table.get -> string!
+Anarchon.Sqlite.SqliteBackendOptions.Table.set -> void
+Microsoft.Extensions.DependencyInjection.SqliteAnarchonBuilderExtensions
+override Anarchon.Sqlite.SqliteBackend.Name.get -> string!
+static Microsoft.Extensions.DependencyInjection.SqliteAnarchonBuilderExtensions.UseSqlite(this Anarchon.AnarchonBuilder! builder, string! connectionString) -> Anarchon.AnarchonBuilder!
+static Microsoft.Extensions.DependencyInjection.SqliteAnarchonBuilderExtensions.UseSqlite(this Anarchon.AnarchonBuilder! builder, System.Action<Anarchon.Sqlite.SqliteBackendOptions!>! configure) -> Anarchon.AnarchonBuilder!
+static Microsoft.Extensions.DependencyInjection.SqliteAnarchonBuilderExtensions.UseSqlite(this Anarchon.AnarchonBuilder! builder, System.Action<System.IServiceProvider!, Anarchon.Sqlite.SqliteBackendOptions!>! configure) -> Anarchon.AnarchonBuilder!

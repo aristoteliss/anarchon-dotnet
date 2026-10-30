@@ -1,0 +1,17 @@
+#nullable enable
+Anarchon.Postgres.PostgresBackend
+Anarchon.Postgres.PostgresBackend.PostgresBackend(Anarchon.Postgres.PostgresBackendOptions! options) -> void
+Anarchon.Postgres.PostgresBackend.PostgresBackend(string! connectionString) -> void
+Anarchon.Postgres.PostgresBackendOptions
+Anarchon.Postgres.PostgresBackendOptions.ConnectionString.get -> string?
+Anarchon.Postgres.PostgresBackendOptions.ConnectionString.set -> void
+Anarchon.Postgres.PostgresBackendOptions.DataSource.get -> Npgsql.NpgsqlDataSource?
+Anarchon.Postgres.PostgresBackendOptions.DataSource.set -> void
+Anarchon.Postgres.PostgresBackendOptions.PostgresBackendOptions() -> void
+Anarchon.Postgres.PostgresBackendOptions.Table.get -> string!
+Anarchon.Postgres.PostgresBackendOptions.Table.set -> void
+Microsoft.Extensions.DependencyInjection.PostgresAnarchonBuilderExtensions
+override Anarchon.Postgres.PostgresBackend.Name.get -> string!
+static Microsoft.Extensions.DependencyInjection.PostgresAnarchonBuilderExtensions.UsePostgres(this Anarchon.AnarchonBuilder! builder, string! connectionString) -> Anarchon.AnarchonBuilder!
+static Microsoft.Extensions.DependencyInjection.PostgresAnarchonBuilderExtensions.UsePostgres(this Anarchon.AnarchonBuilder! builder, System.Action<Anarchon.Postgres.PostgresBackendOptions!>! configure) -> Anarchon.AnarchonBuilder!
+static Microsoft.Extensions.DependencyInjection.PostgresAnarchonBuilderExtensions.UsePostgres(this Anarchon.AnarchonBuilder! builder, System.Action<System.IServiceProvider!, Anarchon.Postgres.PostgresBackendOptions!>! configure) -> Anarchon.AnarchonBuilder!

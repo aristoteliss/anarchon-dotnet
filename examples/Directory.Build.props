@@ -1,0 +1,11 @@
+<Project>
+  <Import Project="$(MSBuildThisFileDirectory)../Directory.Build.props" />
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <OutputType>Exe</OutputType>
+    <!-- Examples are scripts: plain logging calls and console output read best there. -->
+    <NoWarn>$(NoWarn);CS1591;CA1515;CA2007;CA1303;CA1812;CA1848;CA1873</NoWarn>
+  </PropertyGroup>
+</Project>

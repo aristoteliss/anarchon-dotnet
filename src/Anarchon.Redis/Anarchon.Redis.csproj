@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Anarchon.Redis</RootNamespace>
+    <Description>Redis and Valkey backend for Anarchon, on StackExchange.Redis: one atomic Lua script or XADD claims each run; the default Lease strategy adds backup runners, retries, catch-up and no overlapping runs.</Description>
+    <PackageTags>$(PackageTags);redis;valkey;stackexchange.redis</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Anarchon/Anarchon.csproj" />
+    <PackageReference Include="StackExchange.Redis" />
+  </ItemGroup>
+</Project>

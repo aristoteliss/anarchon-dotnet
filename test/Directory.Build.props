@@ -1,0 +1,33 @@
+<Project>
+  <Import Project="$(MSBuildThisFileDirectory)../Directory.Build.props" />
+
+  <!--
+    A project named *.Tests is a test executable. Any other project here (Anarchon.Specification)
+    is a library of tests that the test projects inherit.
+  -->
+  <PropertyGroup>
+    <IsTestExecutable>$(MSBuildProjectName.EndsWith('.Tests'))</IsTestExecutable>
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Test names are sentences, tests run on xUnit's own context, and tests may block or throw plain exceptions. -->
+    <NoWarn>$(NoWarn);CS1591;CA1707;CA2007;CA1515;CA1861;CA1849;CA1822;CA2201;xUnit1051</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(IsTestExecutable)' == 'true'">
+    <IsTestProject>true</IsTestProject>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(IsTestExecutable)' == 'true'">
+    <PackageReference Include="xunit.v3" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(IsTestExecutable)' != 'true'">
+    <PackageReference Include="xunit.v3.extensibility.core" />
+    <PackageReference Include="xunit.v3.assert" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+</Project>

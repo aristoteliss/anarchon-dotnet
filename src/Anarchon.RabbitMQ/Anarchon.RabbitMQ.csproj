@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Anarchon.RabbitMQ</RootNamespace>
+    <Description>RabbitMQ backend for Anarchon, on RabbitMQ.Client: a gate queue per run that holds one message, with publisher confirms, decides which instance runs each time. Claim only: no leases.</Description>
+    <PackageTags>$(PackageTags);rabbitmq;amqp</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Anarchon/Anarchon.csproj" />
+    <PackageReference Include="RabbitMQ.Client" />
+  </ItemGroup>
+</Project>

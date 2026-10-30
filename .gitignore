@@ -1,0 +1,25 @@
+# build output
+bin/
+obj/
+artifacts/
+packed/
+*.nupkg
+*.snupkg
+
+# test runs and coverage
+TestResults/
+coverage/
+*.trx
+
+# editors and systems
+.vs/
+.idea/
+*.user
+*.suo
+.DS_Store
+
+# local settings and secrets: values belong in the environment, never in the repository
+.env
+.env.*
+!.env.example
+appsettings.*.local.json

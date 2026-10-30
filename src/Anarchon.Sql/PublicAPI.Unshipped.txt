@@ -1,0 +1,25 @@
+#nullable enable
+abstract Anarchon.Sql.SqlBackend.CheckServerAsync(System.Data.Common.DbConnection! connection, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+abstract Anarchon.Sql.SqlBackend.Name.get -> string!
+abstract Anarchon.Sql.SqlBackend.OpenConnectionAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<System.Data.Common.DbConnection!>
+abstract Anarchon.Sql.SqlDialect.BigInt.get -> string!
+abstract Anarchon.Sql.SqlDialect.NowMs.get -> string!
+Anarchon.Sql.SqlBackend
+Anarchon.Sql.SqlBackend.ClaimAsync(Anarchon.Backends.ClaimInput! input, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!
+Anarchon.Sql.SqlBackend.CloseAsync() -> System.Threading.Tasks.Task!
+Anarchon.Sql.SqlBackend.DedupeWindow.get -> System.TimeSpan
+Anarchon.Sql.SqlBackend.HistoryAsync(string! job, int limit, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Anarchon.RunRecord!>!>!
+Anarchon.Sql.SqlBackend.InitAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Anarchon.Sql.SqlBackend.PrepareJobAsync(string! job, int historySize, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Anarchon.Sql.SqlBackend.RecordManualRunAsync(Anarchon.Backends.ClaimInput! input, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<long?>!
+Anarchon.Sql.SqlBackend.Runs.get -> Anarchon.Backends.IRunStore!
+Anarchon.Sql.SqlBackend.SaveResultAsync(string! job, Anarchon.Backends.StoredResult! result, int historySize, System.TimeSpan? historyTtl, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Anarchon.Sql.SqlBackend.SqlBackend(string! table, Anarchon.Sql.SqlDialect! dialect) -> void
+Anarchon.Sql.SqlDialect
+Anarchon.Sql.SqlDialect.SqlDialect() -> void
+virtual Anarchon.Sql.SqlBackend.CloseConnectionsAsync() -> System.Threading.Tasks.ValueTask
+virtual Anarchon.Sql.SqlDialect.BeginClaimAsync(System.Data.Common.DbConnection! connection, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.ValueTask<System.Data.Common.DbTransaction!>
+virtual Anarchon.Sql.SqlDialect.ExtraTables(string! table) -> System.Collections.Generic.IEnumerable<string!>!
+virtual Anarchon.Sql.SqlDialect.ForUpdate.get -> string!
+virtual Anarchon.Sql.SqlDialect.IsAlreadyCreated(System.Data.Common.DbException! error) -> bool
+virtual Anarchon.Sql.SqlDialect.SerializeClaims(string! table) -> string?

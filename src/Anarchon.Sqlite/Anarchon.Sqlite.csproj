@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Anarchon.Sqlite</RootNamespace>
+    <Description>SQLite backend for Anarchon, on Microsoft.Data.Sqlite: one BEGIN IMMEDIATE transaction claims each run, with backup runners, retries, catch-up and no overlapping runs, for the processes of one machine that open the same file.</Description>
+    <PackageTags>$(PackageTags);sqlite;microsoft.data.sqlite</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Anarchon.Sql/Anarchon.Sql.csproj" />
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+  </ItemGroup>
+</Project>

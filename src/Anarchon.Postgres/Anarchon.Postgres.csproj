@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Anarchon.Postgres</RootNamespace>
+    <Description>PostgreSQL backend for Anarchon, on Npgsql: one short transaction claims each run, with backup runners, retries, catch-up and no overlapping runs. Leases run on the database's clock.</Description>
+    <PackageTags>$(PackageTags);postgres;postgresql;npgsql</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Anarchon.Sql/Anarchon.Sql.csproj" />
+    <PackageReference Include="Npgsql" />
+  </ItemGroup>
+</Project>

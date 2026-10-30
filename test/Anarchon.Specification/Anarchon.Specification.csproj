@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The tests every backend's test project inherits: the backend contract, the lease rules and schedulers racing on one store. -->
+  <ItemGroup>
+    <ProjectReference Include="../../src/Anarchon/Anarchon.csproj" />
+  </ItemGroup>
+</Project>

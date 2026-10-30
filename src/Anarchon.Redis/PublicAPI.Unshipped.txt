@@ -1,0 +1,43 @@
+#nullable enable
+Anarchon.Redis.RedisBackend
+Anarchon.Redis.RedisBackend.CheckJob(Anarchon.Backends.JobLimits! job) -> void
+Anarchon.Redis.RedisBackend.ClaimAsync(Anarchon.Backends.ClaimInput! input, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!
+Anarchon.Redis.RedisBackend.CloseAsync() -> System.Threading.Tasks.Task!
+Anarchon.Redis.RedisBackend.DedupeWindow.get -> System.TimeSpan
+Anarchon.Redis.RedisBackend.HistoryAsync(string! job, int limit, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Anarchon.RunRecord!>!>!
+Anarchon.Redis.RedisBackend.InitAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Anarchon.Redis.RedisBackend.Name.get -> string!
+Anarchon.Redis.RedisBackend.PrepareJobAsync(string! job, int historySize, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Anarchon.Redis.RedisBackend.RecordManualRunAsync(Anarchon.Backends.ClaimInput! input, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<long?>!
+Anarchon.Redis.RedisBackend.RedisBackend(Anarchon.Redis.RedisBackendOptions! options) -> void
+Anarchon.Redis.RedisBackend.RedisBackend(string! configuration) -> void
+Anarchon.Redis.RedisBackend.Runs.get -> Anarchon.Backends.IRunStore?
+Anarchon.Redis.RedisBackend.SaveResultAsync(string! job, Anarchon.Backends.StoredResult! result, int historySize, System.TimeSpan? historyTtl, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Anarchon.Redis.RedisBackend.Strategy.get -> Anarchon.Redis.RedisStrategy
+Anarchon.Redis.RedisBackendOptions
+Anarchon.Redis.RedisBackendOptions.Configuration.get -> string?
+Anarchon.Redis.RedisBackendOptions.Configuration.set -> void
+Anarchon.Redis.RedisBackendOptions.Connection.get -> StackExchange.Redis.IConnectionMultiplexer?
+Anarchon.Redis.RedisBackendOptions.Connection.set -> void
+Anarchon.Redis.RedisBackendOptions.Database.get -> int
+Anarchon.Redis.RedisBackendOptions.Database.set -> void
+Anarchon.Redis.RedisBackendOptions.IdmpDuration.get -> System.TimeSpan?
+Anarchon.Redis.RedisBackendOptions.IdmpDuration.set -> void
+Anarchon.Redis.RedisBackendOptions.IdmpMaxSize.get -> int?
+Anarchon.Redis.RedisBackendOptions.IdmpMaxSize.set -> void
+Anarchon.Redis.RedisBackendOptions.Prefix.get -> string!
+Anarchon.Redis.RedisBackendOptions.Prefix.set -> void
+Anarchon.Redis.RedisBackendOptions.RedisBackendOptions() -> void
+Anarchon.Redis.RedisBackendOptions.ScriptWindow.get -> System.TimeSpan?
+Anarchon.Redis.RedisBackendOptions.ScriptWindow.set -> void
+Anarchon.Redis.RedisBackendOptions.Strategy.get -> Anarchon.Redis.RedisStrategy
+Anarchon.Redis.RedisBackendOptions.Strategy.set -> void
+Anarchon.Redis.RedisStrategy
+Anarchon.Redis.RedisStrategy.Idmp = 2 -> Anarchon.Redis.RedisStrategy
+Anarchon.Redis.RedisStrategy.Lease = 0 -> Anarchon.Redis.RedisStrategy
+Anarchon.Redis.RedisStrategy.Script = 3 -> Anarchon.Redis.RedisStrategy
+Anarchon.Redis.RedisStrategy.StreamId = 1 -> Anarchon.Redis.RedisStrategy
+Microsoft.Extensions.DependencyInjection.RedisAnarchonBuilderExtensions
+static Microsoft.Extensions.DependencyInjection.RedisAnarchonBuilderExtensions.UseRedis(this Anarchon.AnarchonBuilder! builder, string! configuration) -> Anarchon.AnarchonBuilder!
+static Microsoft.Extensions.DependencyInjection.RedisAnarchonBuilderExtensions.UseRedis(this Anarchon.AnarchonBuilder! builder, System.Action<Anarchon.Redis.RedisBackendOptions!>! configure) -> Anarchon.AnarchonBuilder!
+static Microsoft.Extensions.DependencyInjection.RedisAnarchonBuilderExtensions.UseRedis(this Anarchon.AnarchonBuilder! builder, System.Action<System.IServiceProvider!, Anarchon.Redis.RedisBackendOptions!>! configure) -> Anarchon.AnarchonBuilder!

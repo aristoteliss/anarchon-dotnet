@@ -1,0 +1,23 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Anarchon/Anarchon.csproj" />
+    <Project Path="src/Anarchon.Redis/Anarchon.Redis.csproj" />
+    <Project Path="src/Anarchon.Sql/Anarchon.Sql.csproj" />
+    <Project Path="src/Anarchon.Postgres/Anarchon.Postgres.csproj" />
+    <Project Path="src/Anarchon.Sqlite/Anarchon.Sqlite.csproj" />
+    <Project Path="src/Anarchon.RabbitMQ/Anarchon.RabbitMQ.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/Anarchon.Tests/Anarchon.Tests.csproj" />
+    <Project Path="test/Anarchon.Specification/Anarchon.Specification.csproj" />
+    <Project Path="test/Anarchon.Redis.Tests/Anarchon.Redis.Tests.csproj" />
+    <Project Path="test/Anarchon.Sql.Tests/Anarchon.Sql.Tests.csproj" />
+    <Project Path="test/Anarchon.Postgres.Tests/Anarchon.Postgres.Tests.csproj" />
+    <Project Path="test/Anarchon.Sqlite.Tests/Anarchon.Sqlite.Tests.csproj" />
+    <Project Path="test/Anarchon.RabbitMQ.Tests/Anarchon.RabbitMQ.Tests.csproj" />
+  </Folder>
+  <Folder Name="/examples/">
+    <Project Path="examples/Basic/Basic.csproj" />
+    <Project Path="examples/Hosting/Hosting.csproj" />
+  </Folder>
+</Solution>

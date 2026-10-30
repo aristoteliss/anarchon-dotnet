@@ -1,0 +1,51 @@
+# Every server the tests use, on the ports the test projects expect by default. The ports differ
+# from the usual 6379 and 5432 so a Redis or Postgres you already run is never touched. Nothing is
+# kept: `docker compose -f test/docker-compose.test.yml down` removes the containers and their data.
+name: anarchon-dotnet-test
+
+services:
+  redis:
+    image: redis:8.6-alpine
+    ports: ['127.0.0.1:6381:6379']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 2s
+      retries: 15
+
+  redis-7:
+    image: redis:7.0-alpine
+    ports: ['127.0.0.1:6380:6379']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 2s
+      retries: 15
+
+  valkey:
+    image: valkey/valkey:9.1-alpine
+    ports: ['127.0.0.1:6390:6379']
+    healthcheck:
+      test: ['CMD', 'valkey-cli', 'ping']
+      interval: 2s
+      retries: 15
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres # a throwaway test database, never a real one
+      POSTGRES_DB: anarchon_test
+    ports: ['127.0.0.1:5433:5432']
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', 'postgres', '-d', 'anarchon_test']
+      interval: 2s
+      retries: 15
+
+  # The brokers start only on request: docker compose -f test/docker-compose.test.yml --profile brokers up -d --wait
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    profiles: [brokers]
+    ports: ['127.0.0.1:5672:5672', '127.0.0.1:15672:15672']
+    healthcheck:
+      # ping answers before the AMQP listener accepts connections; this waits for the listener
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'check_port_connectivity']
+      interval: 5s
+      retries: 20

@@ -1,0 +1,88 @@
+name: Bug report
+description: Anarchon behaves differently from its documentation
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Remove passwords, tokens and connection strings from everything you paste, including logs.
+  - type: input
+    id: version
+    attributes:
+      label: Anarchon version
+      description: The versions of the Anarchon and Anarchon.Redis packages
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: dotnet
+    attributes:
+      label: .NET version
+      description: The output of `dotnet --version`, and the target framework of your app
+      placeholder: 10.0.403, net10.0
+    validations:
+      required: true
+  - type: dropdown
+    id: backend
+    attributes:
+      label: Backend
+      options:
+        - Redis
+        - Valkey
+        - A backend of my own
+    validations:
+      required: true
+  - type: input
+    id: store
+    attributes:
+      label: Store and client versions
+      description: The server's version, and the client package with its version
+      placeholder: Redis 8.6, StackExchange.Redis 3.4.5
+    validations:
+      required: true
+  - type: dropdown
+    id: node
+    attributes:
+      label: Node.js instances
+      description: Do instances of the Node.js package share the same store and jobs?
+      options:
+        - 'No'
+        - 'Yes'
+    validations:
+      required: true
+  - type: textarea
+    id: configuration
+    attributes:
+      label: Configuration
+      description: The scheduler options (strategy, Lease, Heartbeat) and the job (schedule and options), without credentials. Say how many instances run.
+      render: csharp
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happened instead. Logs of the category `Anarchon` at Debug help, and so does `scheduler.HistoryAsync(name)` for the run.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: The smallest program that shows the problem, and the steps to run it (for example which process to stop, and when).
+      render: csharp
+    validations:
+      required: true
+  - type: checkboxes
+    id: redacted
+    attributes:
+      label: Credentials
+      options:
+        - label: I removed passwords, tokens and connection strings from this report.
+          required: true

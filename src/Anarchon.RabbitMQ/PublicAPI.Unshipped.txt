@@ -1,0 +1,29 @@
+#nullable enable
+Anarchon.RabbitMQ.RabbitMQBackend
+Anarchon.RabbitMQ.RabbitMQBackend.CheckJob(Anarchon.Backends.JobLimits! job) -> void
+Anarchon.RabbitMQ.RabbitMQBackend.ClaimAsync(Anarchon.Backends.ClaimInput! input, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!
+Anarchon.RabbitMQ.RabbitMQBackend.CloseAsync() -> System.Threading.Tasks.Task!
+Anarchon.RabbitMQ.RabbitMQBackend.DedupeWindow.get -> System.TimeSpan
+Anarchon.RabbitMQ.RabbitMQBackend.HistoryAsync(string! job, int limit, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Anarchon.RunRecord!>!>!
+Anarchon.RabbitMQ.RabbitMQBackend.InitAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Anarchon.RabbitMQ.RabbitMQBackend.Name.get -> string!
+Anarchon.RabbitMQ.RabbitMQBackend.PrepareJobAsync(string! job, int historySize, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Anarchon.RabbitMQ.RabbitMQBackend.RabbitMQBackend(Anarchon.RabbitMQ.RabbitMQBackendOptions! options) -> void
+Anarchon.RabbitMQ.RabbitMQBackend.RabbitMQBackend(string! connectionString) -> void
+Anarchon.RabbitMQ.RabbitMQBackend.RecordClaimAsync(Anarchon.Backends.ClaimInput! input, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Anarchon.RabbitMQ.RabbitMQBackend.RecordManualRunAsync(Anarchon.Backends.ClaimInput! input, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<long?>!
+Anarchon.RabbitMQ.RabbitMQBackend.SaveResultAsync(string! job, Anarchon.Backends.StoredResult! result, int historySize, System.TimeSpan? historyTtl, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Anarchon.RabbitMQ.RabbitMQBackendOptions
+Anarchon.RabbitMQ.RabbitMQBackendOptions.Connection.get -> RabbitMQ.Client.IConnection?
+Anarchon.RabbitMQ.RabbitMQBackendOptions.Connection.set -> void
+Anarchon.RabbitMQ.RabbitMQBackendOptions.ConnectionString.get -> string?
+Anarchon.RabbitMQ.RabbitMQBackendOptions.ConnectionString.set -> void
+Anarchon.RabbitMQ.RabbitMQBackendOptions.Prefix.get -> string!
+Anarchon.RabbitMQ.RabbitMQBackendOptions.Prefix.set -> void
+Anarchon.RabbitMQ.RabbitMQBackendOptions.RabbitMQBackendOptions() -> void
+Anarchon.RabbitMQ.RabbitMQBackendOptions.SlotTtl.get -> System.TimeSpan
+Anarchon.RabbitMQ.RabbitMQBackendOptions.SlotTtl.set -> void
+Microsoft.Extensions.DependencyInjection.RabbitMQAnarchonBuilderExtensions
+static Microsoft.Extensions.DependencyInjection.RabbitMQAnarchonBuilderExtensions.UseRabbitMQ(this Anarchon.AnarchonBuilder! builder, string! connectionString) -> Anarchon.AnarchonBuilder!
+static Microsoft.Extensions.DependencyInjection.RabbitMQAnarchonBuilderExtensions.UseRabbitMQ(this Anarchon.AnarchonBuilder! builder, System.Action<Anarchon.RabbitMQ.RabbitMQBackendOptions!>! configure) -> Anarchon.AnarchonBuilder!
+static Microsoft.Extensions.DependencyInjection.RabbitMQAnarchonBuilderExtensions.UseRabbitMQ(this Anarchon.AnarchonBuilder! builder, System.Action<System.IServiceProvider!, Anarchon.RabbitMQ.RabbitMQBackendOptions!>! configure) -> Anarchon.AnarchonBuilder!

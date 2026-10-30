@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Anarchon.Sql</RootNamespace>
+    <Description>The SQL lease store shared by Anarchon's SQL backends (Anarchon.Postgres, Anarchon.Sqlite), on ADO.NET: one short transaction claims each run, leases run on the database's clock. Reference it directly only to put Anarchon on another database.</Description>
+    <PackageTags>$(PackageTags);sql;ado.net</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Anarchon/Anarchon.csproj" />
+  </ItemGroup>
+</Project>

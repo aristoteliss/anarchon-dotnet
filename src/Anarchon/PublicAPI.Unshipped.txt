@@ -1,0 +1,586 @@
+#nullable enable
+abstract Anarchon.Backends.ClaimOutcome.<Clone>$() -> Anarchon.Backends.ClaimOutcome!
+abstract Anarchon.RunEvent.<Clone>$() -> Anarchon.RunEvent!
+Anarchon.AnarchonBuilder
+Anarchon.AnarchonBuilder.AddJobs<T>(Anarchon.RegisterOptions? options = null) -> Anarchon.AnarchonBuilder!
+Anarchon.AnarchonBuilder.Name.get -> string!
+Anarchon.AnarchonBuilder.Services.get -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Anarchon.AnarchonBuilder.UseBackend(System.Func<System.IServiceProvider!, Anarchon.Backends.IBackend!>! factory) -> Anarchon.AnarchonBuilder!
+Anarchon.AnarchonErrorCode
+Anarchon.AnarchonErrorCode.JobExists = 5 -> Anarchon.AnarchonErrorCode
+Anarchon.AnarchonErrorCode.Server = 3 -> Anarchon.AnarchonErrorCode
+Anarchon.AnarchonErrorCode.State = 4 -> Anarchon.AnarchonErrorCode
+Anarchon.AnarchonErrorCode.Store = 7 -> Anarchon.AnarchonErrorCode
+Anarchon.AnarchonErrorCode.StoreFormat = 8 -> Anarchon.AnarchonErrorCode
+Anarchon.AnarchonErrorCode.UnknownJob = 6 -> Anarchon.AnarchonErrorCode
+Anarchon.AnarchonErrorCode.UnsafeJob = 2 -> Anarchon.AnarchonErrorCode
+Anarchon.AnarchonErrorCode.Unsupported = 1 -> Anarchon.AnarchonErrorCode
+Anarchon.AnarchonException
+Anarchon.AnarchonException.AnarchonException(Anarchon.AnarchonErrorCode code, string! message, System.Exception? innerException = null) -> void
+Anarchon.AnarchonException.Code.get -> Anarchon.AnarchonErrorCode
+Anarchon.AtAttribute
+Anarchon.AtAttribute.AtAttribute(string! when) -> void
+Anarchon.AtAttribute.When.get -> string!
+Anarchon.Backends.ActiveRun
+Anarchon.Backends.ActiveRun.ActiveRun() -> void
+Anarchon.Backends.ActiveRun.ActiveRun(long Slot, int Attempt, bool IsAlive) -> void
+Anarchon.Backends.ActiveRun.Attempt.get -> int
+Anarchon.Backends.ActiveRun.Attempt.init -> void
+Anarchon.Backends.ActiveRun.Deconstruct(out long Slot, out int Attempt, out bool IsAlive) -> void
+Anarchon.Backends.ActiveRun.Equals(Anarchon.Backends.ActiveRun other) -> bool
+Anarchon.Backends.ActiveRun.IsAlive.get -> bool
+Anarchon.Backends.ActiveRun.IsAlive.init -> void
+Anarchon.Backends.ActiveRun.Slot.get -> long
+Anarchon.Backends.ActiveRun.Slot.init -> void
+Anarchon.Backends.ClaimInput
+Anarchon.Backends.ClaimInput.ClaimInput() -> void
+Anarchon.Backends.ClaimInput.ClaimInput(Anarchon.Backends.ClaimInput! original) -> void
+Anarchon.Backends.ClaimInput.HistorySize.get -> int
+Anarchon.Backends.ClaimInput.HistorySize.init -> void
+Anarchon.Backends.ClaimInput.HistoryTtl.get -> System.TimeSpan?
+Anarchon.Backends.ClaimInput.HistoryTtl.init -> void
+Anarchon.Backends.ClaimInput.InstanceId.get -> string!
+Anarchon.Backends.ClaimInput.InstanceId.init -> void
+Anarchon.Backends.ClaimInput.Job.get -> string!
+Anarchon.Backends.ClaimInput.Job.init -> void
+Anarchon.Backends.ClaimInput.Slot.get -> long
+Anarchon.Backends.ClaimInput.Slot.init -> void
+Anarchon.Backends.ClaimInput.Token.get -> string!
+Anarchon.Backends.ClaimInput.Token.init -> void
+Anarchon.Backends.ClaimMode
+Anarchon.Backends.ClaimMode.New = 0 -> Anarchon.Backends.ClaimMode
+Anarchon.Backends.ClaimMode.Takeover = 1 -> Anarchon.Backends.ClaimMode
+Anarchon.Backends.ClaimOutcome
+Anarchon.Backends.ClaimOutcome.ClaimOutcome(Anarchon.Backends.ClaimOutcome! original) -> void
+Anarchon.Backends.ClaimOutcome.Done
+Anarchon.Backends.ClaimOutcome.Done.Done() -> void
+Anarchon.Backends.ClaimOutcome.Done.Equals(Anarchon.Backends.ClaimOutcome.Done? other) -> bool
+Anarchon.Backends.ClaimOutcome.Late
+Anarchon.Backends.ClaimOutcome.Late.By.get -> System.TimeSpan
+Anarchon.Backends.ClaimOutcome.Late.By.init -> void
+Anarchon.Backends.ClaimOutcome.Late.Deconstruct(out System.TimeSpan By) -> void
+Anarchon.Backends.ClaimOutcome.Late.Equals(Anarchon.Backends.ClaimOutcome.Late? other) -> bool
+Anarchon.Backends.ClaimOutcome.Late.Late(System.TimeSpan By) -> void
+Anarchon.Backends.ClaimOutcome.None
+Anarchon.Backends.ClaimOutcome.None.Equals(Anarchon.Backends.ClaimOutcome.None? other) -> bool
+Anarchon.Backends.ClaimOutcome.None.None() -> void
+Anarchon.Backends.ClaimOutcome.Overlap
+Anarchon.Backends.ClaimOutcome.Overlap.Deconstruct(out long Slot) -> void
+Anarchon.Backends.ClaimOutcome.Overlap.Equals(Anarchon.Backends.ClaimOutcome.Overlap? other) -> bool
+Anarchon.Backends.ClaimOutcome.Overlap.Overlap(long Slot) -> void
+Anarchon.Backends.ClaimOutcome.Overlap.Slot.get -> long
+Anarchon.Backends.ClaimOutcome.Overlap.Slot.init -> void
+Anarchon.Backends.ClaimOutcome.Running
+Anarchon.Backends.ClaimOutcome.Running.Attempt.get -> int
+Anarchon.Backends.ClaimOutcome.Running.Attempt.init -> void
+Anarchon.Backends.ClaimOutcome.Running.Deconstruct(out int Attempt) -> void
+Anarchon.Backends.ClaimOutcome.Running.Equals(Anarchon.Backends.ClaimOutcome.Running? other) -> bool
+Anarchon.Backends.ClaimOutcome.Running.Running(int Attempt) -> void
+Anarchon.Backends.ClaimOutcome.Won
+Anarchon.Backends.ClaimOutcome.Won.Attempt.get -> int
+Anarchon.Backends.ClaimOutcome.Won.Attempt.init -> void
+Anarchon.Backends.ClaimOutcome.Won.Deconstruct(out int Attempt) -> void
+Anarchon.Backends.ClaimOutcome.Won.Equals(Anarchon.Backends.ClaimOutcome.Won? other) -> bool
+Anarchon.Backends.ClaimOutcome.Won.Won(int Attempt) -> void
+Anarchon.Backends.ClaimRecord
+Anarchon.Backends.ClaimRecord.<Clone>$() -> Anarchon.Backends.ClaimRecord!
+Anarchon.Backends.ClaimRecord.At.get -> System.DateTimeOffset
+Anarchon.Backends.ClaimRecord.At.init -> void
+Anarchon.Backends.ClaimRecord.Attempt.get -> int
+Anarchon.Backends.ClaimRecord.Attempt.init -> void
+Anarchon.Backends.ClaimRecord.By.get -> string!
+Anarchon.Backends.ClaimRecord.By.init -> void
+Anarchon.Backends.ClaimRecord.ClaimRecord() -> void
+Anarchon.Backends.ClaimRecord.Equals(Anarchon.Backends.ClaimRecord? other) -> bool
+Anarchon.Backends.ClaimRecord.IsManual.get -> bool
+Anarchon.Backends.ClaimRecord.IsManual.init -> void
+Anarchon.Backends.ClaimRecord.Reason.get -> Anarchon.RunReason?
+Anarchon.Backends.ClaimRecord.Reason.init -> void
+Anarchon.Backends.ClaimRecord.Slot.get -> long
+Anarchon.Backends.ClaimRecord.Slot.init -> void
+Anarchon.Backends.IBackend
+Anarchon.Backends.IBackend.CheckJob(Anarchon.Backends.JobLimits! job) -> void
+Anarchon.Backends.IBackend.ClaimAsync(Anarchon.Backends.ClaimInput! input, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!
+Anarchon.Backends.IBackend.CloseAsync() -> System.Threading.Tasks.Task!
+Anarchon.Backends.IBackend.DedupeWindow.get -> System.TimeSpan
+Anarchon.Backends.IBackend.HistoryAsync(string! job, int limit, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Anarchon.RunRecord!>!>!
+Anarchon.Backends.IBackend.InitAsync(System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Anarchon.Backends.IBackend.Name.get -> string!
+Anarchon.Backends.IBackend.PrepareJobAsync(string! job, int historySize, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Anarchon.Backends.IBackend.RecordClaimAsync(Anarchon.Backends.ClaimInput! input, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Anarchon.Backends.IBackend.RecordManualRunAsync(Anarchon.Backends.ClaimInput! input, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<long?>!
+Anarchon.Backends.IBackend.Runs.get -> Anarchon.Backends.IRunStore?
+Anarchon.Backends.IBackend.SaveResultAsync(string! job, Anarchon.Backends.StoredResult! result, int historySize, System.TimeSpan? historyTtl, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task!
+Anarchon.Backends.IRunStore
+Anarchon.Backends.IRunStore.ActiveAsync(string! job, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Anarchon.Backends.ActiveRun>!>!
+Anarchon.Backends.IRunStore.ClaimAsync(Anarchon.Backends.RunClaim! claim, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<Anarchon.Backends.ClaimOutcome!>!
+Anarchon.Backends.IRunStore.FinishAsync(string! job, long slot, string! token, Anarchon.RunStatus status, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!
+Anarchon.Backends.IRunStore.HeartbeatAsync(string! job, long slot, string! token, System.TimeSpan lease, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!
+Anarchon.Backends.IRunStore.ReleaseAsync(string! job, long slot, string! token, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!
+Anarchon.Backends.JobLimits
+Anarchon.Backends.JobLimits.<Clone>$() -> Anarchon.Backends.JobLimits!
+Anarchon.Backends.JobLimits.Equals(Anarchon.Backends.JobLimits? other) -> bool
+Anarchon.Backends.JobLimits.HistorySize.get -> int
+Anarchon.Backends.JobLimits.HistorySize.init -> void
+Anarchon.Backends.JobLimits.HistoryTtl.get -> System.TimeSpan?
+Anarchon.Backends.JobLimits.HistoryTtl.init -> void
+Anarchon.Backends.JobLimits.Jitter.get -> System.TimeSpan
+Anarchon.Backends.JobLimits.Jitter.init -> void
+Anarchon.Backends.JobLimits.JobLimits() -> void
+Anarchon.Backends.JobLimits.MaxLate.get -> System.TimeSpan
+Anarchon.Backends.JobLimits.MaxLate.init -> void
+Anarchon.Backends.JobLimits.MinGap.get -> System.TimeSpan
+Anarchon.Backends.JobLimits.MinGap.init -> void
+Anarchon.Backends.JobLimits.Name.get -> string!
+Anarchon.Backends.JobLimits.Name.init -> void
+Anarchon.Backends.RunClaim
+Anarchon.Backends.RunClaim.Equals(Anarchon.Backends.RunClaim? other) -> bool
+Anarchon.Backends.RunClaim.Keep.get -> System.TimeSpan?
+Anarchon.Backends.RunClaim.Keep.init -> void
+Anarchon.Backends.RunClaim.Lease.get -> System.TimeSpan
+Anarchon.Backends.RunClaim.Lease.init -> void
+Anarchon.Backends.RunClaim.MaxAttempts.get -> int
+Anarchon.Backends.RunClaim.MaxAttempts.init -> void
+Anarchon.Backends.RunClaim.MaxLate.get -> System.TimeSpan?
+Anarchon.Backends.RunClaim.MaxLate.init -> void
+Anarchon.Backends.RunClaim.Mode.get -> Anarchon.Backends.ClaimMode
+Anarchon.Backends.RunClaim.Mode.init -> void
+Anarchon.Backends.RunClaim.Overlap.get -> Anarchon.OverlapPolicy
+Anarchon.Backends.RunClaim.Overlap.init -> void
+Anarchon.Backends.RunClaim.Reason.get -> Anarchon.RunReason
+Anarchon.Backends.RunClaim.Reason.init -> void
+Anarchon.Backends.RunClaim.RunClaim() -> void
+Anarchon.Backends.RunHistory
+Anarchon.Backends.StoredResult
+Anarchon.Backends.StoredResult.<Clone>$() -> Anarchon.Backends.StoredResult!
+Anarchon.Backends.StoredResult.Attempt.get -> int
+Anarchon.Backends.StoredResult.Attempt.init -> void
+Anarchon.Backends.StoredResult.By.get -> string!
+Anarchon.Backends.StoredResult.By.init -> void
+Anarchon.Backends.StoredResult.Duration.get -> System.TimeSpan
+Anarchon.Backends.StoredResult.Duration.init -> void
+Anarchon.Backends.StoredResult.Equals(Anarchon.Backends.StoredResult? other) -> bool
+Anarchon.Backends.StoredResult.Error.get -> string?
+Anarchon.Backends.StoredResult.Error.init -> void
+Anarchon.Backends.StoredResult.FinishedAt.get -> System.DateTimeOffset
+Anarchon.Backends.StoredResult.FinishedAt.init -> void
+Anarchon.Backends.StoredResult.Slot.get -> long
+Anarchon.Backends.StoredResult.Slot.init -> void
+Anarchon.Backends.StoredResult.StartedAt.get -> System.DateTimeOffset
+Anarchon.Backends.StoredResult.StartedAt.init -> void
+Anarchon.Backends.StoredResult.Status.get -> Anarchon.RunStatus
+Anarchon.Backends.StoredResult.Status.init -> void
+Anarchon.Backends.StoredResult.StoredResult() -> void
+Anarchon.Backends.StoreFormat
+Anarchon.CronAttribute
+Anarchon.CronAttribute.CronAttribute(string! expression) -> void
+Anarchon.CronAttribute.Expression.get -> string!
+Anarchon.CronAttribute.Overlap.get -> Anarchon.OverlapPolicy
+Anarchon.CronAttribute.Overlap.set -> void
+Anarchon.CronAttribute.TimeZone.get -> string?
+Anarchon.CronAttribute.TimeZone.set -> void
+Anarchon.CronJobOptions
+Anarchon.CronJobOptions.CronJobOptions() -> void
+Anarchon.CronJobOptions.TimeZone.get -> System.TimeZoneInfo?
+Anarchon.CronJobOptions.TimeZone.set -> void
+Anarchon.Duration
+Anarchon.EveryAttribute
+Anarchon.EveryAttribute.EveryAttribute(string! interval) -> void
+Anarchon.EveryAttribute.Interval.get -> string!
+Anarchon.EveryAttribute.Offset.get -> string?
+Anarchon.EveryAttribute.Offset.set -> void
+Anarchon.EveryAttribute.Overlap.get -> Anarchon.OverlapPolicy
+Anarchon.EveryAttribute.Overlap.set -> void
+Anarchon.EveryJobOptions
+Anarchon.EveryJobOptions.EveryJobOptions() -> void
+Anarchon.EveryJobOptions.Offset.get -> System.TimeSpan?
+Anarchon.EveryJobOptions.Offset.set -> void
+Anarchon.JobAttribute
+Anarchon.JobAttribute.CatchUp.get -> string?
+Anarchon.JobAttribute.CatchUp.set -> void
+Anarchon.JobAttribute.HistorySize.get -> int
+Anarchon.JobAttribute.HistorySize.set -> void
+Anarchon.JobAttribute.HistoryTtl.get -> string?
+Anarchon.JobAttribute.HistoryTtl.set -> void
+Anarchon.JobAttribute.Jitter.get -> string?
+Anarchon.JobAttribute.Jitter.set -> void
+Anarchon.JobAttribute.MaxAttempts.get -> int
+Anarchon.JobAttribute.MaxAttempts.set -> void
+Anarchon.JobAttribute.MaxLate.get -> string?
+Anarchon.JobAttribute.MaxLate.set -> void
+Anarchon.JobAttribute.Name.get -> string?
+Anarchon.JobAttribute.Name.set -> void
+Anarchon.JobAttribute.Timeout.get -> string?
+Anarchon.JobAttribute.Timeout.set -> void
+Anarchon.JobAttribute.YieldAfterFailure.get -> bool
+Anarchon.JobAttribute.YieldAfterFailure.set -> void
+Anarchon.JobContext
+Anarchon.JobContext.Attempt.get -> int
+Anarchon.JobContext.CancellationToken.get -> System.Threading.CancellationToken
+Anarchon.JobContext.Data.get -> object?
+Anarchon.JobContext.GetData<T>() -> T
+Anarchon.JobContext.InstanceId.get -> string!
+Anarchon.JobContext.IsManual.get -> bool
+Anarchon.JobContext.Name.get -> string!
+Anarchon.JobContext.Reason.get -> Anarchon.RunReason
+Anarchon.JobContext.ScheduledAt.get -> System.DateTimeOffset
+Anarchon.JobContext.Slot.get -> long
+Anarchon.JobDataProvider
+Anarchon.JobInfo
+Anarchon.JobInfo.<Clone>$() -> Anarchon.JobInfo!
+Anarchon.JobInfo.Equals(Anarchon.JobInfo? other) -> bool
+Anarchon.JobInfo.JobInfo() -> void
+Anarchon.JobInfo.Name.get -> string!
+Anarchon.JobInfo.Name.init -> void
+Anarchon.JobInfo.NextRunAt.get -> System.DateTimeOffset?
+Anarchon.JobInfo.NextRunAt.init -> void
+Anarchon.JobInfo.RunningHere.get -> int
+Anarchon.JobInfo.RunningHere.init -> void
+Anarchon.JobInfo.Schedule.get -> string!
+Anarchon.JobInfo.Schedule.init -> void
+Anarchon.JobInfo.Type.get -> Anarchon.JobType
+Anarchon.JobInfo.Type.init -> void
+Anarchon.JobOptions
+Anarchon.JobOptions.CatchUp.get -> System.TimeSpan?
+Anarchon.JobOptions.CatchUp.set -> void
+Anarchon.JobOptions.Data.get -> object?
+Anarchon.JobOptions.Data.set -> void
+Anarchon.JobOptions.HistorySize.get -> int?
+Anarchon.JobOptions.HistorySize.set -> void
+Anarchon.JobOptions.HistoryTtl.get -> System.TimeSpan?
+Anarchon.JobOptions.HistoryTtl.set -> void
+Anarchon.JobOptions.Jitter.get -> System.TimeSpan?
+Anarchon.JobOptions.Jitter.set -> void
+Anarchon.JobOptions.JobOptions() -> void
+Anarchon.JobOptions.MaxAttempts.get -> int?
+Anarchon.JobOptions.MaxAttempts.set -> void
+Anarchon.JobOptions.MaxLate.get -> System.TimeSpan?
+Anarchon.JobOptions.MaxLate.set -> void
+Anarchon.JobOptions.Timeout.get -> System.TimeSpan?
+Anarchon.JobOptions.Timeout.set -> void
+Anarchon.JobOptions.YieldAfterFailure.get -> bool?
+Anarchon.JobOptions.YieldAfterFailure.set -> void
+Anarchon.JobType
+Anarchon.JobType.Cron = 0 -> Anarchon.JobType
+Anarchon.JobType.Every = 1 -> Anarchon.JobType
+Anarchon.JobType.Once = 2 -> Anarchon.JobType
+Anarchon.LostEvent
+Anarchon.LostEvent.Attempt.get -> int
+Anarchon.LostEvent.Attempt.init -> void
+Anarchon.LostEvent.Equals(Anarchon.LostEvent? other) -> bool
+Anarchon.LostEvent.LostEvent() -> void
+Anarchon.OverlapPolicy
+Anarchon.OverlapPolicy.Allow = 1 -> Anarchon.OverlapPolicy
+Anarchon.OverlapPolicy.Skip = 0 -> Anarchon.OverlapPolicy
+Anarchon.RecurringJobOptions
+Anarchon.RecurringJobOptions.Overlap.get -> Anarchon.OverlapPolicy?
+Anarchon.RecurringJobOptions.Overlap.set -> void
+Anarchon.RecurringJobOptions.RecurringJobOptions() -> void
+Anarchon.RegisterOptions
+Anarchon.RegisterOptions.Defaults.get -> Anarchon.RecurringJobOptions?
+Anarchon.RegisterOptions.Defaults.set -> void
+Anarchon.RegisterOptions.Prefix.get -> string?
+Anarchon.RegisterOptions.Prefix.set -> void
+Anarchon.RegisterOptions.RegisterOptions() -> void
+Anarchon.RegisterOptions.TimeZone.get -> System.TimeZoneInfo?
+Anarchon.RegisterOptions.TimeZone.set -> void
+Anarchon.RunEvent
+Anarchon.RunEvent.InstanceId.get -> string!
+Anarchon.RunEvent.InstanceId.init -> void
+Anarchon.RunEvent.Job.get -> string!
+Anarchon.RunEvent.Job.init -> void
+Anarchon.RunEvent.RunEvent() -> void
+Anarchon.RunEvent.RunEvent(Anarchon.RunEvent! original) -> void
+Anarchon.RunEvent.ScheduledAt.get -> System.DateTimeOffset
+Anarchon.RunEvent.Slot.get -> long
+Anarchon.RunEvent.Slot.init -> void
+Anarchon.RunFailureEvent
+Anarchon.RunFailureEvent.Cause.get -> System.Exception!
+Anarchon.RunFailureEvent.Cause.init -> void
+Anarchon.RunFailureEvent.Equals(Anarchon.RunFailureEvent? other) -> bool
+Anarchon.RunInterruptedEvent
+Anarchon.RunInterruptedEvent.Cause.get -> System.Exception!
+Anarchon.RunInterruptedEvent.Cause.init -> void
+Anarchon.RunInterruptedEvent.Equals(Anarchon.RunInterruptedEvent? other) -> bool
+Anarchon.RunInterruptedEvent.HandedOver.get -> bool
+Anarchon.RunInterruptedEvent.HandedOver.init -> void
+Anarchon.RunReason
+Anarchon.RunReason.CatchUp = 2 -> Anarchon.RunReason
+Anarchon.RunReason.Manual = 1 -> Anarchon.RunReason
+Anarchon.RunReason.Scheduled = 0 -> Anarchon.RunReason
+Anarchon.RunReason.Takeover = 3 -> Anarchon.RunReason
+Anarchon.RunRecord
+Anarchon.RunRecord.Attempt.get -> int
+Anarchon.RunRecord.Attempt.init -> void
+Anarchon.RunRecord.Duration.get -> System.TimeSpan?
+Anarchon.RunRecord.Duration.init -> void
+Anarchon.RunRecord.Error.get -> string?
+Anarchon.RunRecord.Error.init -> void
+Anarchon.RunRecord.FinishedAt.get -> System.DateTimeOffset?
+Anarchon.RunRecord.FinishedAt.init -> void
+Anarchon.RunRecord.IsManual.get -> bool
+Anarchon.RunRecord.IsManual.init -> void
+Anarchon.RunRecord.Reason.get -> Anarchon.RunReason?
+Anarchon.RunRecord.Reason.init -> void
+Anarchon.RunRecord.RunRecord() -> void
+Anarchon.RunRecord.RunRecord(Anarchon.RunRecord! original) -> void
+Anarchon.RunRecord.StartedAt.get -> System.DateTimeOffset
+Anarchon.RunRecord.StartedAt.init -> void
+Anarchon.RunRecord.Status.get -> Anarchon.RunStatus
+Anarchon.RunRecord.Status.init -> void
+Anarchon.RunStartEvent
+Anarchon.RunStartEvent.Attempt.get -> int
+Anarchon.RunStartEvent.Attempt.init -> void
+Anarchon.RunStartEvent.Equals(Anarchon.RunStartEvent? other) -> bool
+Anarchon.RunStartEvent.IsManual.get -> bool
+Anarchon.RunStartEvent.IsManual.init -> void
+Anarchon.RunStartEvent.Reason.get -> Anarchon.RunReason
+Anarchon.RunStartEvent.Reason.init -> void
+Anarchon.RunStartEvent.RunStartEvent() -> void
+Anarchon.RunStatus
+Anarchon.RunStatus.Failed = 2 -> Anarchon.RunStatus
+Anarchon.RunStatus.Interrupted = 3 -> Anarchon.RunStatus
+Anarchon.RunStatus.Running = 0 -> Anarchon.RunStatus
+Anarchon.RunStatus.Success = 1 -> Anarchon.RunStatus
+Anarchon.Scheduler
+Anarchon.Scheduler.At(string! name, System.DateTimeOffset when, System.Func<Anarchon.JobContext!, System.Threading.Tasks.Task!>! handler, Anarchon.JobOptions? options = null) -> Anarchon.Scheduler!
+Anarchon.Scheduler.Backend.get -> Anarchon.Backends.IBackend!
+Anarchon.Scheduler.Cron(string! name, string! expression, System.Func<Anarchon.JobContext!, System.Threading.Tasks.Task!>! handler, Anarchon.CronJobOptions? options = null) -> Anarchon.Scheduler!
+Anarchon.Scheduler.Dispose() -> void
+Anarchon.Scheduler.DisposeAsync() -> System.Threading.Tasks.ValueTask
+Anarchon.Scheduler.Error -> System.EventHandler<Anarchon.SchedulerErrorEvent!>?
+Anarchon.Scheduler.Every(string! name, System.TimeSpan interval, System.Func<Anarchon.JobContext!, System.Threading.Tasks.Task!>! handler, Anarchon.EveryJobOptions? options = null) -> Anarchon.Scheduler!
+Anarchon.Scheduler.Failed -> System.EventHandler<Anarchon.RunFailureEvent!>?
+Anarchon.Scheduler.GetJobs() -> System.Collections.Generic.IReadOnlyList<Anarchon.JobInfo!>!
+Anarchon.Scheduler.GetNextRun(string! name) -> System.DateTimeOffset?
+Anarchon.Scheduler.HistoryAsync(string! name, int limit = 20, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<Anarchon.RunRecord!>!>!
+Anarchon.Scheduler.InstanceId.get -> string!
+Anarchon.Scheduler.Interrupted -> System.EventHandler<Anarchon.RunInterruptedEvent!>?
+Anarchon.Scheduler.LastRunAsync(string! name, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task<Anarchon.RunRecord?>!
+Anarchon.Scheduler.Lost -> System.EventHandler<Anarchon.LostEvent!>?
+Anarchon.Scheduler.Register(object! target, Anarchon.RegisterOptions? options = null) -> Anarchon.Scheduler!
+Anarchon.Scheduler.Remove(string! name) -> bool
+Anarchon.Scheduler.RunNowAsync(string! name, object? data = null) -> System.Threading.Tasks.Task<Anarchon.RunRecord!>!
+Anarchon.Scheduler.Scheduler(Anarchon.SchedulerOptions! options) -> void
+Anarchon.Scheduler.SetData(object? data) -> Anarchon.Scheduler!
+Anarchon.Scheduler.Skipped -> System.EventHandler<Anarchon.SkipEvent!>?
+Anarchon.Scheduler.StartAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Anarchon.Scheduler.Started -> System.EventHandler<Anarchon.RunStartEvent!>?
+Anarchon.Scheduler.StopAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Anarchon.Scheduler.Succeeded -> System.EventHandler<Anarchon.RunRecord!>?
+Anarchon.SchedulerErrorEvent
+Anarchon.SchedulerErrorEvent.<Clone>$() -> Anarchon.SchedulerErrorEvent!
+Anarchon.SchedulerErrorEvent.Equals(Anarchon.SchedulerErrorEvent? other) -> bool
+Anarchon.SchedulerErrorEvent.Error.get -> System.Exception!
+Anarchon.SchedulerErrorEvent.Error.init -> void
+Anarchon.SchedulerErrorEvent.Job.get -> string?
+Anarchon.SchedulerErrorEvent.Job.init -> void
+Anarchon.SchedulerErrorEvent.SchedulerErrorEvent() -> void
+Anarchon.SchedulerErrorEvent.Slot.get -> long?
+Anarchon.SchedulerErrorEvent.Slot.init -> void
+Anarchon.SchedulerOptions
+Anarchon.SchedulerOptions.Backend.get -> Anarchon.Backends.IBackend?
+Anarchon.SchedulerOptions.Backend.set -> void
+Anarchon.SchedulerOptions.Data.get -> object?
+Anarchon.SchedulerOptions.Data.set -> void
+Anarchon.SchedulerOptions.Heartbeat.get -> System.TimeSpan?
+Anarchon.SchedulerOptions.Heartbeat.set -> void
+Anarchon.SchedulerOptions.HistorySize.get -> int
+Anarchon.SchedulerOptions.HistorySize.set -> void
+Anarchon.SchedulerOptions.HistoryTtl.get -> System.TimeSpan?
+Anarchon.SchedulerOptions.HistoryTtl.set -> void
+Anarchon.SchedulerOptions.InstanceId.get -> string?
+Anarchon.SchedulerOptions.InstanceId.set -> void
+Anarchon.SchedulerOptions.Jitter.get -> System.TimeSpan
+Anarchon.SchedulerOptions.Jitter.set -> void
+Anarchon.SchedulerOptions.Lease.get -> System.TimeSpan?
+Anarchon.SchedulerOptions.Lease.set -> void
+Anarchon.SchedulerOptions.LoggerFactory.get -> Microsoft.Extensions.Logging.ILoggerFactory?
+Anarchon.SchedulerOptions.LoggerFactory.set -> void
+Anarchon.SchedulerOptions.MaxLate.get -> System.TimeSpan
+Anarchon.SchedulerOptions.MaxLate.set -> void
+Anarchon.SchedulerOptions.SchedulerOptions() -> void
+Anarchon.SchedulerOptions.StopTimeout.get -> System.TimeSpan
+Anarchon.SchedulerOptions.StopTimeout.set -> void
+Anarchon.SchedulerOptions.TimeProvider.get -> System.TimeProvider?
+Anarchon.SchedulerOptions.TimeProvider.set -> void
+Anarchon.SchedulerOptions.TimeZone.get -> System.TimeZoneInfo?
+Anarchon.SchedulerOptions.TimeZone.set -> void
+Anarchon.SkipEvent
+Anarchon.SkipEvent.Equals(Anarchon.SkipEvent? other) -> bool
+Anarchon.SkipEvent.Late.get -> System.TimeSpan?
+Anarchon.SkipEvent.Late.init -> void
+Anarchon.SkipEvent.Reason.get -> Anarchon.SkipReason
+Anarchon.SkipEvent.Reason.init -> void
+Anarchon.SkipEvent.SkipEvent() -> void
+Anarchon.SkipReason
+Anarchon.SkipReason.Late = 1 -> Anarchon.SkipReason
+Anarchon.SkipReason.Overlap = 2 -> Anarchon.SkipReason
+Anarchon.SkipReason.Taken = 0 -> Anarchon.SkipReason
+const Anarchon.Backends.StoreFormat.Current = 1 -> int
+Microsoft.Extensions.DependencyInjection.AnarchonServiceCollectionExtensions
+override Anarchon.Backends.ActiveRun.GetHashCode() -> int
+override Anarchon.Backends.ClaimInput.Equals(object? obj) -> bool
+override Anarchon.Backends.ClaimInput.GetHashCode() -> int
+override Anarchon.Backends.ClaimInput.ToString() -> string!
+override Anarchon.Backends.ClaimOutcome.Done.<Clone>$() -> Anarchon.Backends.ClaimOutcome.Done!
+override Anarchon.Backends.ClaimOutcome.Done.Equals(object? obj) -> bool
+override Anarchon.Backends.ClaimOutcome.Done.GetHashCode() -> int
+override Anarchon.Backends.ClaimOutcome.Done.ToString() -> string!
+override Anarchon.Backends.ClaimOutcome.Equals(object? obj) -> bool
+override Anarchon.Backends.ClaimOutcome.GetHashCode() -> int
+override Anarchon.Backends.ClaimOutcome.Late.<Clone>$() -> Anarchon.Backends.ClaimOutcome.Late!
+override Anarchon.Backends.ClaimOutcome.Late.Equals(object? obj) -> bool
+override Anarchon.Backends.ClaimOutcome.Late.GetHashCode() -> int
+override Anarchon.Backends.ClaimOutcome.Late.ToString() -> string!
+override Anarchon.Backends.ClaimOutcome.None.<Clone>$() -> Anarchon.Backends.ClaimOutcome.None!
+override Anarchon.Backends.ClaimOutcome.None.Equals(object? obj) -> bool
+override Anarchon.Backends.ClaimOutcome.None.GetHashCode() -> int
+override Anarchon.Backends.ClaimOutcome.None.ToString() -> string!
+override Anarchon.Backends.ClaimOutcome.Overlap.<Clone>$() -> Anarchon.Backends.ClaimOutcome.Overlap!
+override Anarchon.Backends.ClaimOutcome.Overlap.Equals(object? obj) -> bool
+override Anarchon.Backends.ClaimOutcome.Overlap.GetHashCode() -> int
+override Anarchon.Backends.ClaimOutcome.Overlap.ToString() -> string!
+override Anarchon.Backends.ClaimOutcome.Running.<Clone>$() -> Anarchon.Backends.ClaimOutcome.Running!
+override Anarchon.Backends.ClaimOutcome.Running.Equals(object? obj) -> bool
+override Anarchon.Backends.ClaimOutcome.Running.GetHashCode() -> int
+override Anarchon.Backends.ClaimOutcome.Running.ToString() -> string!
+override Anarchon.Backends.ClaimOutcome.ToString() -> string!
+override Anarchon.Backends.ClaimOutcome.Won.<Clone>$() -> Anarchon.Backends.ClaimOutcome.Won!
+override Anarchon.Backends.ClaimOutcome.Won.Equals(object? obj) -> bool
+override Anarchon.Backends.ClaimOutcome.Won.GetHashCode() -> int
+override Anarchon.Backends.ClaimOutcome.Won.ToString() -> string!
+override Anarchon.Backends.ClaimRecord.Equals(object? obj) -> bool
+override Anarchon.Backends.ClaimRecord.GetHashCode() -> int
+override Anarchon.Backends.ClaimRecord.ToString() -> string!
+override Anarchon.Backends.JobLimits.Equals(object? obj) -> bool
+override Anarchon.Backends.JobLimits.GetHashCode() -> int
+override Anarchon.Backends.JobLimits.ToString() -> string!
+override Anarchon.Backends.RunClaim.<Clone>$() -> Anarchon.Backends.RunClaim!
+override Anarchon.Backends.RunClaim.Equals(object? obj) -> bool
+override Anarchon.Backends.RunClaim.GetHashCode() -> int
+override Anarchon.Backends.RunClaim.ToString() -> string!
+override Anarchon.Backends.StoredResult.Equals(object? obj) -> bool
+override Anarchon.Backends.StoredResult.GetHashCode() -> int
+override Anarchon.Backends.StoredResult.ToString() -> string!
+override Anarchon.JobInfo.Equals(object? obj) -> bool
+override Anarchon.JobInfo.GetHashCode() -> int
+override Anarchon.JobInfo.ToString() -> string!
+override Anarchon.LostEvent.<Clone>$() -> Anarchon.LostEvent!
+override Anarchon.LostEvent.Equals(object? obj) -> bool
+override Anarchon.LostEvent.GetHashCode() -> int
+override Anarchon.LostEvent.ToString() -> string!
+override Anarchon.RunEvent.Equals(object? obj) -> bool
+override Anarchon.RunEvent.GetHashCode() -> int
+override Anarchon.RunEvent.ToString() -> string!
+override Anarchon.RunFailureEvent.<Clone>$() -> Anarchon.RunFailureEvent!
+override Anarchon.RunFailureEvent.Equals(object? obj) -> bool
+override Anarchon.RunFailureEvent.GetHashCode() -> int
+override Anarchon.RunFailureEvent.ToString() -> string!
+override Anarchon.RunInterruptedEvent.<Clone>$() -> Anarchon.RunInterruptedEvent!
+override Anarchon.RunInterruptedEvent.Equals(object? obj) -> bool
+override Anarchon.RunInterruptedEvent.GetHashCode() -> int
+override Anarchon.RunInterruptedEvent.ToString() -> string!
+override Anarchon.RunRecord.<Clone>$() -> Anarchon.RunRecord!
+override Anarchon.RunRecord.EqualityContract.get -> System.Type!
+override Anarchon.RunRecord.Equals(object? obj) -> bool
+override Anarchon.RunRecord.GetHashCode() -> int
+override Anarchon.RunRecord.PrintMembers(System.Text.StringBuilder! builder) -> bool
+override Anarchon.RunRecord.ToString() -> string!
+override Anarchon.RunStartEvent.<Clone>$() -> Anarchon.RunStartEvent!
+override Anarchon.RunStartEvent.Equals(object? obj) -> bool
+override Anarchon.RunStartEvent.GetHashCode() -> int
+override Anarchon.RunStartEvent.ToString() -> string!
+override Anarchon.SchedulerErrorEvent.Equals(object? obj) -> bool
+override Anarchon.SchedulerErrorEvent.GetHashCode() -> int
+override Anarchon.SchedulerErrorEvent.ToString() -> string!
+override Anarchon.SkipEvent.<Clone>$() -> Anarchon.SkipEvent!
+override Anarchon.SkipEvent.Equals(object? obj) -> bool
+override Anarchon.SkipEvent.GetHashCode() -> int
+override Anarchon.SkipEvent.ToString() -> string!
+override sealed Anarchon.Backends.ClaimOutcome.Done.Equals(Anarchon.Backends.ClaimOutcome? other) -> bool
+override sealed Anarchon.Backends.ClaimOutcome.Late.Equals(Anarchon.Backends.ClaimOutcome? other) -> bool
+override sealed Anarchon.Backends.ClaimOutcome.None.Equals(Anarchon.Backends.ClaimOutcome? other) -> bool
+override sealed Anarchon.Backends.ClaimOutcome.Overlap.Equals(Anarchon.Backends.ClaimOutcome? other) -> bool
+override sealed Anarchon.Backends.ClaimOutcome.Running.Equals(Anarchon.Backends.ClaimOutcome? other) -> bool
+override sealed Anarchon.Backends.ClaimOutcome.Won.Equals(Anarchon.Backends.ClaimOutcome? other) -> bool
+override sealed Anarchon.Backends.RunClaim.Equals(Anarchon.Backends.ClaimInput? other) -> bool
+override sealed Anarchon.LostEvent.Equals(Anarchon.RunEvent? other) -> bool
+override sealed Anarchon.RunFailureEvent.Equals(Anarchon.RunRecord? other) -> bool
+override sealed Anarchon.RunInterruptedEvent.Equals(Anarchon.RunRecord? other) -> bool
+override sealed Anarchon.RunRecord.Equals(Anarchon.RunEvent? other) -> bool
+override sealed Anarchon.RunStartEvent.Equals(Anarchon.RunEvent? other) -> bool
+override sealed Anarchon.SkipEvent.Equals(Anarchon.RunEvent? other) -> bool
+static Anarchon.Backends.ActiveRun.operator !=(Anarchon.Backends.ActiveRun left, Anarchon.Backends.ActiveRun right) -> bool
+static Anarchon.Backends.ActiveRun.operator ==(Anarchon.Backends.ActiveRun left, Anarchon.Backends.ActiveRun right) -> bool
+static Anarchon.Backends.ClaimInput.operator !=(Anarchon.Backends.ClaimInput? left, Anarchon.Backends.ClaimInput? right) -> bool
+static Anarchon.Backends.ClaimInput.operator ==(Anarchon.Backends.ClaimInput? left, Anarchon.Backends.ClaimInput? right) -> bool
+static Anarchon.Backends.ClaimOutcome.Done.operator !=(Anarchon.Backends.ClaimOutcome.Done? left, Anarchon.Backends.ClaimOutcome.Done? right) -> bool
+static Anarchon.Backends.ClaimOutcome.Done.operator ==(Anarchon.Backends.ClaimOutcome.Done? left, Anarchon.Backends.ClaimOutcome.Done? right) -> bool
+static Anarchon.Backends.ClaimOutcome.Late.operator !=(Anarchon.Backends.ClaimOutcome.Late? left, Anarchon.Backends.ClaimOutcome.Late? right) -> bool
+static Anarchon.Backends.ClaimOutcome.Late.operator ==(Anarchon.Backends.ClaimOutcome.Late? left, Anarchon.Backends.ClaimOutcome.Late? right) -> bool
+static Anarchon.Backends.ClaimOutcome.None.operator !=(Anarchon.Backends.ClaimOutcome.None? left, Anarchon.Backends.ClaimOutcome.None? right) -> bool
+static Anarchon.Backends.ClaimOutcome.None.operator ==(Anarchon.Backends.ClaimOutcome.None? left, Anarchon.Backends.ClaimOutcome.None? right) -> bool
+static Anarchon.Backends.ClaimOutcome.operator !=(Anarchon.Backends.ClaimOutcome? left, Anarchon.Backends.ClaimOutcome? right) -> bool
+static Anarchon.Backends.ClaimOutcome.operator ==(Anarchon.Backends.ClaimOutcome? left, Anarchon.Backends.ClaimOutcome? right) -> bool
+static Anarchon.Backends.ClaimOutcome.Overlap.operator !=(Anarchon.Backends.ClaimOutcome.Overlap? left, Anarchon.Backends.ClaimOutcome.Overlap? right) -> bool
+static Anarchon.Backends.ClaimOutcome.Overlap.operator ==(Anarchon.Backends.ClaimOutcome.Overlap? left, Anarchon.Backends.ClaimOutcome.Overlap? right) -> bool
+static Anarchon.Backends.ClaimOutcome.Running.operator !=(Anarchon.Backends.ClaimOutcome.Running? left, Anarchon.Backends.ClaimOutcome.Running? right) -> bool
+static Anarchon.Backends.ClaimOutcome.Running.operator ==(Anarchon.Backends.ClaimOutcome.Running? left, Anarchon.Backends.ClaimOutcome.Running? right) -> bool
+static Anarchon.Backends.ClaimOutcome.Won.operator !=(Anarchon.Backends.ClaimOutcome.Won? left, Anarchon.Backends.ClaimOutcome.Won? right) -> bool
+static Anarchon.Backends.ClaimOutcome.Won.operator ==(Anarchon.Backends.ClaimOutcome.Won? left, Anarchon.Backends.ClaimOutcome.Won? right) -> bool
+static Anarchon.Backends.ClaimRecord.operator !=(Anarchon.Backends.ClaimRecord? left, Anarchon.Backends.ClaimRecord? right) -> bool
+static Anarchon.Backends.ClaimRecord.operator ==(Anarchon.Backends.ClaimRecord? left, Anarchon.Backends.ClaimRecord? right) -> bool
+static Anarchon.Backends.JobLimits.operator !=(Anarchon.Backends.JobLimits? left, Anarchon.Backends.JobLimits? right) -> bool
+static Anarchon.Backends.JobLimits.operator ==(Anarchon.Backends.JobLimits? left, Anarchon.Backends.JobLimits? right) -> bool
+static Anarchon.Backends.RunClaim.operator !=(Anarchon.Backends.RunClaim? left, Anarchon.Backends.RunClaim? right) -> bool
+static Anarchon.Backends.RunClaim.operator ==(Anarchon.Backends.RunClaim? left, Anarchon.Backends.RunClaim? right) -> bool
+static Anarchon.Backends.RunHistory.Build(string! job, System.Collections.Generic.IEnumerable<Anarchon.Backends.ClaimRecord!>! claims, System.Collections.Generic.IEnumerable<Anarchon.Backends.StoredResult!>! results, int limit, System.Func<Anarchon.Backends.ClaimRecord!, Anarchon.RunStatus>? pendingStatus = null) -> System.Collections.Generic.IReadOnlyList<Anarchon.RunRecord!>!
+static Anarchon.Backends.StoredResult.operator !=(Anarchon.Backends.StoredResult? left, Anarchon.Backends.StoredResult? right) -> bool
+static Anarchon.Backends.StoredResult.operator ==(Anarchon.Backends.StoredResult? left, Anarchon.Backends.StoredResult? right) -> bool
+static Anarchon.Backends.StoreFormat.Check(string? found, string! where) -> void
+static Anarchon.Duration.Format(System.TimeSpan value) -> string!
+static Anarchon.Duration.Parse(string! value) -> System.TimeSpan
+static Anarchon.JobInfo.operator !=(Anarchon.JobInfo? left, Anarchon.JobInfo? right) -> bool
+static Anarchon.JobInfo.operator ==(Anarchon.JobInfo? left, Anarchon.JobInfo? right) -> bool
+static Anarchon.LostEvent.operator !=(Anarchon.LostEvent? left, Anarchon.LostEvent? right) -> bool
+static Anarchon.LostEvent.operator ==(Anarchon.LostEvent? left, Anarchon.LostEvent? right) -> bool
+static Anarchon.RunEvent.operator !=(Anarchon.RunEvent? left, Anarchon.RunEvent? right) -> bool
+static Anarchon.RunEvent.operator ==(Anarchon.RunEvent? left, Anarchon.RunEvent? right) -> bool
+static Anarchon.RunFailureEvent.operator !=(Anarchon.RunFailureEvent? left, Anarchon.RunFailureEvent? right) -> bool
+static Anarchon.RunFailureEvent.operator ==(Anarchon.RunFailureEvent? left, Anarchon.RunFailureEvent? right) -> bool
+static Anarchon.RunInterruptedEvent.operator !=(Anarchon.RunInterruptedEvent? left, Anarchon.RunInterruptedEvent? right) -> bool
+static Anarchon.RunInterruptedEvent.operator ==(Anarchon.RunInterruptedEvent? left, Anarchon.RunInterruptedEvent? right) -> bool
+static Anarchon.RunRecord.operator !=(Anarchon.RunRecord? left, Anarchon.RunRecord? right) -> bool
+static Anarchon.RunRecord.operator ==(Anarchon.RunRecord? left, Anarchon.RunRecord? right) -> bool
+static Anarchon.RunStartEvent.operator !=(Anarchon.RunStartEvent? left, Anarchon.RunStartEvent? right) -> bool
+static Anarchon.RunStartEvent.operator ==(Anarchon.RunStartEvent? left, Anarchon.RunStartEvent? right) -> bool
+static Anarchon.SchedulerErrorEvent.operator !=(Anarchon.SchedulerErrorEvent? left, Anarchon.SchedulerErrorEvent? right) -> bool
+static Anarchon.SchedulerErrorEvent.operator ==(Anarchon.SchedulerErrorEvent? left, Anarchon.SchedulerErrorEvent? right) -> bool
+static Anarchon.SkipEvent.operator !=(Anarchon.SkipEvent? left, Anarchon.SkipEvent? right) -> bool
+static Anarchon.SkipEvent.operator ==(Anarchon.SkipEvent? left, Anarchon.SkipEvent? right) -> bool
+static Microsoft.Extensions.DependencyInjection.AnarchonServiceCollectionExtensions.AddAnarchon(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services) -> Anarchon.AnarchonBuilder!
+static Microsoft.Extensions.DependencyInjection.AnarchonServiceCollectionExtensions.AddAnarchon(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, string! name, System.Action<Anarchon.SchedulerOptions!>? configure = null) -> Anarchon.AnarchonBuilder!
+static Microsoft.Extensions.DependencyInjection.AnarchonServiceCollectionExtensions.AddAnarchon(this Microsoft.Extensions.DependencyInjection.IServiceCollection! services, System.Action<Anarchon.SchedulerOptions!>! configure) -> Anarchon.AnarchonBuilder!
+virtual Anarchon.Backends.ClaimInput.<Clone>$() -> Anarchon.Backends.ClaimInput!
+virtual Anarchon.Backends.ClaimInput.EqualityContract.get -> System.Type!
+virtual Anarchon.Backends.ClaimInput.Equals(Anarchon.Backends.ClaimInput? other) -> bool
+virtual Anarchon.Backends.ClaimInput.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual Anarchon.Backends.ClaimOutcome.EqualityContract.get -> System.Type!
+virtual Anarchon.Backends.ClaimOutcome.Equals(Anarchon.Backends.ClaimOutcome? other) -> bool
+virtual Anarchon.Backends.ClaimOutcome.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual Anarchon.JobDataProvider.Invoke(Anarchon.JobContext! run) -> System.Threading.Tasks.ValueTask<object?>
+virtual Anarchon.RunEvent.EqualityContract.get -> System.Type!
+virtual Anarchon.RunEvent.Equals(Anarchon.RunEvent? other) -> bool
+virtual Anarchon.RunEvent.PrintMembers(System.Text.StringBuilder! builder) -> bool
+virtual Anarchon.RunRecord.Equals(Anarchon.RunRecord? other) -> bool
+~override Anarchon.Backends.ActiveRun.Equals(object obj) -> bool
+~override Anarchon.Backends.ActiveRun.ToString() -> string
+Anarchon.Backends.RunStoreExtensions
+Anarchon.Backends.RunText
+static Anarchon.Backends.RunStoreExtensions.ClaimManualRunAsync(this Anarchon.Backends.IRunStore! runs, Anarchon.Backends.ClaimInput! input, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<long>!
+static Anarchon.Backends.RunStoreExtensions.ClaimWithoutBackupsAsync(this Anarchon.Backends.IRunStore! runs, Anarchon.Backends.ClaimInput! input, System.Threading.CancellationToken cancellationToken) -> System.Threading.Tasks.Task<bool>!
+static Anarchon.Backends.RunText.ToReason(string? text) -> Anarchon.RunReason?
+static Anarchon.Backends.RunText.ToStatus(string? text) -> Anarchon.RunStatus?
+static Anarchon.Backends.RunText.ToText(Anarchon.RunReason reason) -> string!
+static Anarchon.Backends.RunText.ToText(Anarchon.RunStatus status) -> string!
