@@ -69,18 +69,11 @@ internal static class StoredData
 
     private static StoredResult? ToResult(RedisValue member)
     {
-        ResultJson? json;
-        try
-        {
-            json = JsonSerializer.Deserialize((string?)member ?? "", StoredJsonContext.Default.ResultJson);
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
+        var json = Parse(member);
+        if (json?.By is null) return null;
 
-        var status = RunText.ToStatus(json?.Status);
-        if (json?.By is null || status is null or RunStatus.Running) return null;
+        var status = RunText.ToStatus(json.Status);
+        if (status is null or RunStatus.Running) return null;
 
         return new StoredResult
         {
@@ -93,6 +86,18 @@ internal static class StoredData
             Duration = TimeSpan.FromMilliseconds(json.DurationMs),
             Error = json.Error,
         };
+    }
+
+    private static ResultJson? Parse(RedisValue member)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize((string?)member ?? "", StoredJsonContext.Default.ResultJson);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 }
 

@@ -3,13 +3,14 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Anarchon.Scheduling;
 using Cronos;
 
 namespace Anarchon.Declarations;
 
 /// <summary>A job declared with an attribute on a method: its attribute, its method and how to call it.</summary>
-internal sealed class DeclaredJob
+internal sealed partial class DeclaredJob
 {
     private readonly JobAttribute _attribute;
     private readonly MethodInfo _method;
@@ -107,15 +108,16 @@ internal sealed class DeclaredJob
         where T : JobOptions
     {
         var a = _attribute;
-        options.Jitter = ParseZeroOrMore(a.Jitter) ?? defaults?.Jitter;
-        options.MaxLate = Parse(a.MaxLate) ?? defaults?.MaxLate;
-        options.Timeout = Parse(a.Timeout) ?? defaults?.Timeout;
-        options.HistoryTtl = Parse(a.HistoryTtl) ?? defaults?.HistoryTtl;
-        options.CatchUp = ParseZeroOrMore(a.CatchUp) ?? defaults?.CatchUp;
-        options.HistorySize = a.HistorySizeSetting ?? defaults?.HistorySize;
-        options.MaxAttempts = a.MaxAttemptsSetting ?? defaults?.MaxAttempts;
-        options.YieldAfterFailure = a.YieldAfterFailureSetting ?? defaults?.YieldAfterFailure;
-        options.Data = defaults?.Data;
+        defaults ??= new JobOptions();
+        options.Jitter = ParseZeroOrMore(a.Jitter) ?? defaults.Jitter;
+        options.MaxLate = Parse(a.MaxLate) ?? defaults.MaxLate;
+        options.Timeout = Parse(a.Timeout) ?? defaults.Timeout;
+        options.HistoryTtl = Parse(a.HistoryTtl) ?? defaults.HistoryTtl;
+        options.CatchUp = ParseZeroOrMore(a.CatchUp) ?? defaults.CatchUp;
+        options.HistorySize = a.HistorySizeSetting ?? defaults.HistorySize;
+        options.MaxAttempts = a.MaxAttemptsSetting ?? defaults.MaxAttempts;
+        options.YieldAfterFailure = a.YieldAfterFailureSetting ?? defaults.YieldAfterFailure;
+        options.Data = defaults.Data;
         return options;
     }
 
@@ -126,9 +128,13 @@ internal sealed class DeclaredJob
 
     private static bool IsZero(string duration)
     {
-        var number = duration.Trim().TrimEnd('d', 'h', 'm', 's').Trim();
-        return number.Length > 0 && number.All(c => c is '0' or '.') && number.Count(c => c == '.') <= 1;
+        var text = string.Concat(duration.Where(c => !char.IsWhiteSpace(c)));
+        return ZeroOfOneUnit().IsMatch(text);
     }
+
+    /// <summary>Zero digits, an optional decimal part, and at most one unit: "0", "0s", "0.0ms", ".0h".</summary>
+    [GeneratedRegex(@"^(0+(\.0*)?|\.0+)(ms|s|m|h|d)?$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex ZeroOfOneUnit();
 
     private static long ParseWhen(string when) =>
         DateTimeOffset.Parse(when, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal).ToUnixTimeMilliseconds();

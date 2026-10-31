@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.1.0 (unreleased)
+Versions follow the Node.js package in their first two numbers: Anarchon for .NET 0.6.x has the
+algorithm and the stored data of `anarchon` 0.6.x, so their instances can share jobs. The last number
+belongs to each package.
+
+## 0.6.0 (unreleased)
 
 The first release of Anarchon for .NET: the scheduler and its backends, with the algorithm and the
 stored data of the Node.js package 0.6, so .NET and Node.js instances can share jobs.

@@ -44,7 +44,12 @@ jobs:
           global-json-file: global.json
       - name: Start the test servers
         run: docker compose -f test/docker-compose.test.yml up -d --wait
-      - run: dotnet test -c Release
+      - run: dotnet test -c Release -- --coverlet --coverlet-output-format cobertura
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-servers
+          path: test/*/bin/Release/*/TestResults/coverage.cobertura.xml
+          if-no-files-found: error
 
   # The brokers have a job of their own, as in the Node.js package: the main test job skips them.
   brokers:
@@ -59,8 +64,37 @@ jobs:
           global-json-file: global.json
       - name: Start the brokers
         run: docker compose -f test/docker-compose.test.yml --profile brokers up -d --wait rabbitmq nats
-      - run: dotnet test --project test/Anarchon.RabbitMQ.Tests -c Release
-      - run: dotnet test --project test/Anarchon.Nats.Tests -c Release
+      - run: dotnet test --project test/Anarchon.RabbitMQ.Tests -c Release -- --coverlet --coverlet-output-format cobertura
+      - run: dotnet test --project test/Anarchon.Nats.Tests -c Release -- --coverlet --coverlet-output-format cobertura
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-brokers
+          path: test/*/bin/Release/*/TestResults/coverage.cobertura.xml
+          if-no-files-found: error
+
+  # One report from both test jobs: a summary on the run's page, the HTML report as an artifact.
+  coverage:
+    name: Coverage report
+    needs: [test, brokers]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - run: dotnet tool restore
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: coverage-*
+          path: cobertura
+      - run: >-
+          dotnet reportgenerator -reports:'cobertura/**/coverage.cobertura.xml' -targetdir:coverage
+          -reporttypes:'Html;MarkdownSummaryGithub' -assemblyfilters:'+Anarchon*;-Anarchon.Specification;-*.Tests'
+      - run: cat coverage/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-report
+          path: coverage
 
   package:
     name: Packages (NuGet)

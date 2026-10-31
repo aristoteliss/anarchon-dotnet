@@ -6,9 +6,10 @@ packed/
 *.nupkg
 *.snupkg
 
-# test runs and coverage
+# test runs, coverage and mutation reports
 TestResults/
 coverage/
+StrykerOutput/
 *.trx
 
 # editors and systems

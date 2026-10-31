@@ -5,9 +5,15 @@
       "label": "build",
       "type": "process",
       "command": "dotnet",
-      "args": ["build", "${workspaceFolder}/Anarchon.slnx"],
+      "args": [
+        "build",
+        "${workspaceFolder}/Anarchon.slnx"
+      ],
       "problemMatcher": "$msCompile",
-      "group": { "kind": "build", "isDefault": true }
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
     },
     {
       "label": "test servers: up",
@@ -19,8 +25,26 @@
       "label": "test",
       "type": "process",
       "command": "dotnet",
-      "args": ["test"],
+      "args": [
+        "test"
+      ],
       "problemMatcher": "$msCompile",
+      "group": "test"
+    },
+    {
+      "label": "test: coverage report",
+      "detail": "dotnet r test:full: every test with coverlet, then the HTML report in coverage/index.html, opened (starts the test servers)",
+      "type": "shell",
+      "command": "dotnet tool restore && dotnet r test:full",
+      "problemMatcher": [],
+      "group": "test"
+    },
+    {
+      "label": "test: mutation (Stryker)",
+      "detail": "dotnet r stryker: mutation testing of src/Anarchon with stryker-config.json, then the report from StrykerOutput/, opened",
+      "type": "shell",
+      "command": "dotnet tool restore && dotnet r stryker",
+      "problemMatcher": [],
       "group": "test"
     }
   ]

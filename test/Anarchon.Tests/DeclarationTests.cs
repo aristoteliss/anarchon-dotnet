@@ -72,6 +72,20 @@ public sealed class DeclarationTests
         Assert.Contains("Invalid duration \"0s\": it must be at least 1 ms", timeout.Message, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(typeof(DotJitter))]
+    [InlineData(typeof(StackedUnitsJitter))]
+    [InlineData(typeof(StackedUnitsCatchUp))]
+    public void a_zero_written_wrong_in_jitter_or_catch_up_is_refused_like_any_bad_duration(Type jobs)
+    {
+        var scheduler = new Scheduler(new SchedulerOptions { Backend = new LeaseBackendStub() });
+
+        var error = Assert.Throws<ArgumentException>(() => scheduler.Register(Activator.CreateInstance(jobs)!));
+
+        Assert.Contains("Invalid duration", error.Message, StringComparison.Ordinal);
+        Assert.Empty(scheduler.GetJobs());
+    }
+
     [Fact]
     public void attribute_settings_read_back_what_was_set_and_their_defaults_when_not_set()
     {
@@ -157,6 +171,24 @@ public sealed class DeclarationTests
 
         [Every("10s", Name = "no-catch-up", CatchUp = "0", Jitter = "0.0ms")]
         public Task NoCatchUp() => Task.CompletedTask;
+    }
+
+    public sealed class DotJitter
+    {
+        [Every("10s", Jitter = ".")]
+        public Task Run() => Task.CompletedTask;
+    }
+
+    public sealed class StackedUnitsJitter
+    {
+        [Every("10s", Jitter = "0hms")]
+        public Task Run() => Task.CompletedTask;
+    }
+
+    public sealed class StackedUnitsCatchUp
+    {
+        [Every("10s", CatchUp = "0dd")]
+        public Task Run() => Task.CompletedTask;
     }
 
     public sealed class ZeroTimeout

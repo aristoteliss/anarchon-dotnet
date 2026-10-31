@@ -5,5 +5,30 @@
   },
   "test": {
     "runner": "Microsoft.Testing.Platform"
+  },
+  "scripts": {
+    "build": "dotnet build",
+    "format": "dotnet format --verify-no-changes",
+    "format:fix": "dotnet format",
+    "servers": "docker compose -f test/docker-compose.test.yml up -d --wait",
+    "servers:down": "docker compose -f test/docker-compose.test.yml down",
+    "test": "dotnet test",
+    "test:unit": "dotnet test --project test/Anarchon.Tests",
+    "test:full": "dotnet r servers coverage:clean && { dotnet r coverage:run; tests=$?; dotnet r coverage:report coverage:open; exit $tests; }",
+    "check": "dotnet r format build test",
+    "coverage:clean": "rm -rf coverage test/*/bin/*/*/TestResults",
+    "coverage:run": "dotnet test -- --coverlet --coverlet-output-format cobertura",
+    "coverage:report": "dotnet reportgenerator -reports:'test/*/bin/*/*/TestResults/coverage.cobertura.xml' -targetdir:coverage -reporttypes:'Html;TextSummary' -assemblyfilters:'+Anarchon*;-Anarchon.Specification;-*.Tests' && cat coverage/Summary.txt",
+    "coverage:open": "if [ \"$TERM_PROGRAM\" = vscode ]; then code -r \"coverage/index.html\"; else $(command -v xdg-open || echo open) \"coverage/index.html\"; fi",
+    "stryker": "dotnet r stryker:run stryker:open",
+    "stryker:run": "cd test/Anarchon.Tests && NoCoverlet=true dotnet stryker --config-file ../../stryker-config.json",
+    "stryker:sqlite": "cd test/Anarchon.Sqlite.Tests && NoCoverlet=true dotnet stryker --config-file ../../stryker-config.json",
+    "stryker:sql": "cd test/Anarchon.Sql.Tests && NoCoverlet=true dotnet stryker --config-file ../../stryker-config.json",
+    "stryker:redis": "dotnet r servers && cd test/Anarchon.Redis.Tests && NoCoverlet=true dotnet stryker --config-file ../../stryker-config.json",
+    "stryker:postgres": "dotnet r servers && cd test/Anarchon.Postgres.Tests && NoCoverlet=true dotnet stryker --config-file ../../stryker-config.json",
+    "stryker:nats": "dotnet r servers && cd test/Anarchon.Nats.Tests && NoCoverlet=true dotnet stryker --config-file ../../stryker-config.json",
+    "stryker:rabbitmq": "dotnet r servers && cd test/Anarchon.RabbitMQ.Tests && NoCoverlet=true dotnet stryker --config-file ../../stryker-config.json",
+    "stryker:backends": "dotnet r stryker:sqlite stryker:sql stryker:redis stryker:postgres stryker:nats stryker:rabbitmq",
+    "stryker:open": "report=$(ls -1t test/*/StrykerOutput/*/reports/mutation-report.html 2>/dev/null | head -n 1); [ -n \"$report\" ] || { echo 'No Stryker report yet: run dotnet r stryker'; exit 1; }; if [ \"$TERM_PROGRAM\" = vscode ]; then code -r \"$report\"; else $(command -v xdg-open || echo open) \"$report\"; fi"
   }
 }

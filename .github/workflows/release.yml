@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  release:
+    name: Test, pack and push to nuget.org
+    runs-on: ubuntu-latest
+    # Approval rules and the NUGET_USER variable live on this environment (Settings, Environments).
+    environment: nuget
+    permissions:
+      contents: read
+      id-token: write # Trusted Publishing: nuget.org trusts this workflow's OIDC token
+    env:
+      REQUIRE_SERVERS: redis,redis-7,valkey,postgres,rabbitmq,nats
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - name: Check that the tag matches VersionPrefix
+        run: |
+          version=$(dotnet msbuild src/Anarchon/Anarchon.csproj -getProperty:VersionPrefix)
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match VersionPrefix $version in Directory.Build.props"
+            exit 1
+          fi
+      - name: Start the test servers and the brokers
+        run: docker compose -f test/docker-compose.test.yml --profile brokers up -d --wait
+      - run: dotnet test -c Release
+      - run: for project in src/*/*.csproj; do dotnet pack "$project" -c Release --no-build -o packed; done
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: packages
+          path: packed/*nupkg
+          if-no-files-found: error
+      - name: Sign in to nuget.org
+        id: login
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
+        with:
+          user: ${{ vars.NUGET_USER }}
+      # The .snupkg symbol packages are pushed with their .nupkg.
+      - name: Push the packages
+        run: >-
+          dotnet nuget push 'packed/*.nupkg' --api-key '${{ steps.login.outputs.NUGET_API_KEY }}'
+          --source https://api.nuget.org/v3/index.json --skip-duplicate

@@ -20,8 +20,15 @@
 
   <ItemGroup Condition="'$(IsTestExecutable)' == 'true'">
     <PackageReference Include="xunit.v3" />
-    <!-- Coverage of a run: add the options coverage and coverage-output-format cobertura after the separator of dotnet test. -->
-    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
+    <!--
+      Coverage of a run: add the options coverlet and coverlet-output-format cobertura after the
+      separator of dotnet test (README.md, Tests). NoCoverlet=true leaves it out for Stryker: coverlet
+      makes the test app relaunch itself under a test host controller, and Stryker 5's MTP runner then
+      waits forever for test discovery.
+    -->
+    <PackageReference Include="coverlet.MTP" Condition="'$(NoCoverlet)' != 'true'" />
+    <!-- Direct, also where a backend brings it in: Stryker mutates only a project the tests reference directly. -->
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../src/Anarchon/Anarchon.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(IsTestExecutable)' != 'true'">

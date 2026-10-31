@@ -329,7 +329,47 @@ To make a run fail when a server is missing, instead of skipping its tests, name
 
 This covers, for every backend and each Redis strategy and server: a race where three clients fight over 40 runs, retry-safety and history. For every backend with leases: the lease state machine step by step, and schedulers racing on one store, with hand-over on stop, takeover after a lost lease or a failed hand-over, heartbeats keeping a long run, `YieldAfterFailure`, overlap backups and catch-up. These shared tests live in `test/Anarchon.Specification`, and each backend's test project inherits them. `test/Anarchon.Sql.Tests` and `test/Anarchon.Sqlite.Tests` run them on SQLite files, so they need no server.
 
-Coverage: `dotnet test -- --coverage --coverage-output-format cobertura` writes a Cobertura report per test project.
+### Coverage and mutation testing
+
+The tools are part of the repository: every test project references `coverlet.MTP`, and
+`dotnet-tools.json` pins ReportGenerator and Stryker.NET. `dotnet tool restore` installs them; nothing
+is installed globally.
+
+```sh
+dotnet tool restore
+dotnet test -- --coverlet --coverlet-output-format cobertura     # a Cobertura file per test project
+dotnet reportgenerator -reports:'test/*/bin/*/*/TestResults/coverage.cobertura.xml' -targetdir:coverage \
+  -reporttypes:'Html;TextSummary' -assemblyfilters:'+Anarchon*;-Anarchon.Specification;-*.Tests'
+dotnet r stryker:run                                             # mutation testing, configured by stryker-config.json
+```
+
+- **Coverage** shows which lines and branches the tests run: `coverage/index.html`, with
+  `coverage/Summary.txt` as text. Start the test servers first, or the backends' tests skip and their
+  code reads as uncovered. CI builds the same report from both test jobs and shows its summary on the
+  run's page.
+- **Mutation testing** shows whether the tests would notice a bug: Stryker changes the code one small
+  bug at a time (a `<` for a `<=`, a removed call) and runs the tests against each change. A change the
+  tests miss ("survived") points at a check the tests don't make. It mutates `src/Anarchon` against
+  `test/Anarchon.Tests`, which needs no server; the report is in `test/Anarchon.Tests/StrykerOutput/`.
+
+Short names for these commands are in the `scripts` section of `global.json`, run by the
+[run-script](https://github.com/xt0rted/dotnet-run-script) local tool, like `npm run`. `dotnet r` lists
+them with the command each one runs; edit `global.json` to change one. Arguments after `--` go to the
+command, as in `dotnet r test:unit -- --filter-class "*LeaseRulesTests"`.
+
+| Script | What it does |
+| --- | --- |
+| `dotnet r test` / `test:unit` | Every test / only `test/Anarchon.Tests`, which needs no server |
+| `dotnet r test:full` | Starts the test servers, runs every test with coverage, builds the report and opens it |
+| `dotnet r coverage:open` | Opens the last coverage report |
+| `dotnet r stryker` | Runs Stryker and opens its report |
+| `dotnet r stryker:open` | Opens the last Stryker report |
+| `dotnet r check` | Format check, build and every test |
+
+The scripts run in `sh`. In VS Code's terminal they open a report in the editor: its globe button
+("Open in Integrated Browser") shows the page, and that tab reloads when the report changes. Anywhere else
+they use `xdg-open` (Linux) or `open` (macOS). In VS Code, the
+tasks "test: coverage report" and "test: mutation (Stryker)" run `test:full` and `stryker`.
 
 ## Credits
 

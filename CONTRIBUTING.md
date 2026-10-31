@@ -28,6 +28,10 @@ dotnet build                        # warnings are errors, analyzers included
 dotnet test                         # every test; read the skip count
 ```
 
+To see what the tests miss, the README's [Coverage and mutation testing](README.md#coverage-and-mutation-testing)
+section shows how to get a coverage report and run Stryker. A new branch in the code wants a test that
+takes it, and a mutant that survives in code you changed wants a test that kills it.
+
 - Fix a bug by first adding a test that reproduces it.
 - A change to behavior or to the public API needs its documentation (XML docs, the README, and
   the pages in [anarchon-docs](https://github.com/aristoteliss/anarchon-docs), checked out at
@@ -67,3 +71,23 @@ the changelog.
   change.
 
 CI runs the same commands on every pull request (`.github/workflows/ci.yml`).
+
+## Versions and releases
+
+The first two numbers of a version follow the Node.js package `anarchon`: 0.6.x here has the
+algorithm and the stored data of 0.6.x there, so instances of both can share jobs.
+
+- **Major and minor** move with the Node.js package, once this package has caught up with it.
+  A feature both packages get lands in that shared release.
+- **Patch** belongs to each package: fixes, documentation and dependency updates of this package
+  alone. A patch never changes the stored data or the Lua scripts.
+- **Breaking changes** wait for a major release, as the Compatibility rules above say. Before 1.0,
+  a breaking change goes in a minor release, with a "Breaking" section in the changelog.
+
+To release:
+
+1. Set `VersionPrefix` in `Directory.Build.props`, give the version's changelog heading its date,
+   and move each project's `PublicAPI.Unshipped.txt` lines to `PublicAPI.Shipped.txt`.
+2. Merge to `main`, then tag that commit `v<version>` (for example `v0.6.0`) and push the tag.
+3. `.github/workflows/release.yml` checks that the tag matches `VersionPrefix`, runs every test
+   against every server, packs, and pushes the packages to nuget.org with Trusted Publishing.

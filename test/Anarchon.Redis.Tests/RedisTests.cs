@@ -49,8 +49,24 @@ public sealed class RedisTests
 
         var window = Assert.Throws<AnarchonException>(() => scheduler.Every("slow", TimeSpan.FromMinutes(5), _ => Task.CompletedTask, new() { MaxLate = TimeSpan.FromMinutes(1) }));
         var history = Assert.Throws<AnarchonException>(() => scheduler.Every("short", TimeSpan.FromSeconds(1), _ => Task.CompletedTask, new() { MaxLate = TimeSpan.FromSeconds(10), HistorySize = 5 }));
+        var ttl = Assert.Throws<AnarchonException>(() => scheduler.Every("brief", TimeSpan.FromMinutes(1), _ => Task.CompletedTask, new() { MaxLate = TimeSpan.FromSeconds(5), Jitter = TimeSpan.Zero, HistoryTtl = TimeSpan.FromSeconds(30) }));
 
-        Assert.Equal((AnarchonErrorCode.UnsafeJob, AnarchonErrorCode.UnsafeJob), (window.Code, history.Code));
+        Assert.Equal((AnarchonErrorCode.UnsafeJob, AnarchonErrorCode.UnsafeJob, AnarchonErrorCode.UnsafeJob), (window.Code, history.Code, ttl.Code));
+        Assert.Contains("HistoryTtl must be longer than the Script strategy's window", ttl.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void the_idmp_strategy_refuses_a_job_whose_late_claims_could_outlive_the_ids_it_keeps()
+    {
+        var scheduler = new Scheduler(new SchedulerOptions
+        {
+            Backend = new RedisBackend(new RedisBackendOptions { Strategy = RedisStrategy.Idmp, IdmpMaxSize = 5 }),
+        });
+
+        var error = Assert.Throws<AnarchonException>(() => scheduler.Every("short", TimeSpan.FromSeconds(1), _ => Task.CompletedTask, new() { MaxLate = TimeSpan.FromSeconds(10) }));
+
+        Assert.Equal(AnarchonErrorCode.UnsafeJob, error.Code);
+        Assert.Contains("IdmpMaxSize (5) runs", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -145,6 +161,24 @@ public sealed class RedisTests
 
         Assert.True(scheduled);
         Assert.Equal([(due + 500, true), (due, false)], history.Select(r => (r.Slot, r.IsManual)));
+    }
+
+    [Fact]
+    public async Task history_skips_a_stored_result_that_is_not_json_and_keeps_the_claim()
+    {
+        var server = await Servers.RequireAsync("redis");
+        await using var admin = await Servers.AdminAsync(server);
+        var prefix = Servers.Prefix("corrupt");
+        var backend = new RedisBackend(new RedisBackendOptions { Configuration = server.Url, Strategy = RedisStrategy.StreamId, Prefix = prefix });
+        await backend.InitAsync(CancellationToken.None);
+        var due = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - 1_000;
+
+        await backend.ClaimAsync(Claim("a", due), CancellationToken.None);
+        await admin.GetDatabase().SortedSetAddAsync($"{prefix}job:results", "not json", due);
+        var history = await backend.HistoryAsync("job", 10, CancellationToken.None);
+        await backend.CloseAsync();
+
+        Assert.Equal([due], history.Select(r => r.Slot));
     }
 
     [Fact]
