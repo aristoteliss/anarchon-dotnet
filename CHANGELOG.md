@@ -7,6 +7,9 @@ stored data of the Node.js package 0.6, so .NET and Node.js instances can share 
 
 ### Added
 
+- **Documentation** at [aristoteliss.github.io/anarchon-docs](https://aristoteliss.github.io/anarchon-docs/), shared with the Node.js
+  package: every code sample in C# and TypeScript, ASP.NET Core and worker service recipes, and a
+  .NET reference. The NuGet packages link to it as their project URL.
 - **`Anarchon`**: the `Scheduler` with interval, cron and one-off jobs (`Every()`, `Cron()`, `At()`),
   `RunNowAsync()`, history across instances, events, run data, and the lease runner: backup runners,
   retries, catch-up, no overlapping runs, hand-over on stop and `YieldAfterFailure`.

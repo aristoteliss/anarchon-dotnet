@@ -3,6 +3,8 @@
 [![CI](https://github.com/aristoteliss/anarchon-dotnet/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/aristoteliss/anarchon-dotnet/actions/workflows/ci.yml)
 [![license](https://img.shields.io/badge/license-AGPL--3.0%20or%20commercial-blue.svg)](#license-and-commercial-use)
 
+[**Documentation**](https://aristoteliss.github.io/anarchon-docs/) · [Quick start](https://aristoteliss.github.io/anarchon-docs/getting-started/quick-start/) · [ASP.NET Core](https://aristoteliss.github.io/anarchon-docs/recipes/aspnet-core/) · [.NET reference](https://aristoteliss.github.io/anarchon-docs/reference/dotnet/scheduler/) · [Guarantees and limits](https://aristoteliss.github.io/anarchon-docs/reference/guarantees/)
+
 Leaderless scheduling for .NET services, coordinated through the datastore you already run. Run the same jobs in every instance; an atomic claim in the store selects one runner for each scheduled slot. On Redis, Valkey, PostgreSQL, SQLite and NATS (`Lease`) a lease lets another instance retry a run whose runner stopped renewing it; RabbitMQ and NATS (`MsgId`) only pick the runner. That gives at-least-once execution after failures, not exactly-once side effects: handlers should be idempotent, and a frozen runner can briefly overlap its replacement.
 
 Anarchon also handles what goes wrong in real clusters:
@@ -254,6 +256,24 @@ Coming from the Node.js API:
 - **A hung job blocks its job.** With `OverlapPolicy.Skip`, a hung job keeps renewing its lease and blocks later runs. Set `Timeout`.
 - **Keep clocks in sync (NTP).** Run times come from each instance's clock; leases use the store's clock.
 - **`Every()` runs on a UTC grid.** For wall-clock times in a time zone, use `Cron()` with `TimeZone`.
+
+## Documentation
+
+**Read the [hosted documentation](https://aristoteliss.github.io/anarchon-docs/)**: guides to every option, with each code sample in C# and
+in TypeScript, the claim and lease algorithms with diagrams, one page per backend, recipes
+([ASP.NET Core](https://aristoteliss.github.io/anarchon-docs/recipes/aspnet-core/), [worker service](https://aristoteliss.github.io/anarchon-docs/recipes/worker-service/),
+Kubernetes, long-running jobs) and a [.NET reference](https://aristoteliss.github.io/anarchon-docs/reference/dotnet/scheduler/). It covers
+this package and the Node.js one.
+
+The documentation has its own repository, [anarchon-docs](https://github.com/aristoteliss/anarchon-docs),
+checked out here at `docs/` as a git submodule. To read or change it locally (it needs Node.js and pnpm):
+
+```sh
+git submodule update --init   # once, or clone with --recursive
+cd docs
+pnpm install
+pnpm dev                      # http://localhost:4321
+```
 
 ## Examples
 

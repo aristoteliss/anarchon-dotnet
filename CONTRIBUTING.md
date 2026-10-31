@@ -29,8 +29,9 @@ dotnet test                         # every test; read the skip count
 ```
 
 - Fix a bug by first adding a test that reproduces it.
-- A change to behavior or to the public API needs its documentation (XML docs and the README) and
-  an entry in `CHANGELOG.md`.
+- A change to behavior or to the public API needs its documentation (XML docs, the README, and
+  the pages in [anarchon-docs](https://github.com/aristoteliss/anarchon-docs), checked out at
+  `docs/` as a submodule; open that pull request there) and an entry in `CHANGELOG.md`.
 - A change to the public API is recorded in the project's `PublicAPI.Unshipped.txt`: the build
   fails until it is (`dotnet format analyzers --diagnostics RS0016` records additions). Review that
   diff: removing or renaming anything users or other backends rely on is a breaking change. At a

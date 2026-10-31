@@ -20,3 +20,9 @@ updates:
         patterns: ['Microsoft.Extensions.*']
       tests:
         patterns: ['xunit*']
+
+  # docs/ is the anarchon-docs repository; this moves the pointer to its latest commit.
+  - package-ecosystem: gitsubmodule
+    directory: /
+    schedule:
+      interval: daily
