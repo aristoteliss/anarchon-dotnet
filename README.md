@@ -338,7 +338,7 @@ is installed globally.
 ```sh
 dotnet tool restore
 dotnet test -- --coverlet --coverlet-output-format cobertura     # a Cobertura file per test project
-dotnet reportgenerator -reports:'test/*/bin/*/*/TestResults/coverage.cobertura.xml' -targetdir:coverage \
+dotnet reportgenerator -reports:'test/*/bin/*/*/TestResults/coverage.cobertura*.xml' -targetdir:coverage \
   -reporttypes:'Html;TextSummary' -assemblyfilters:'+Anarchon*;-Anarchon.Specification;-*.Tests'
 dotnet r stryker:run                                             # mutation testing, configured by stryker-config.json
 ```

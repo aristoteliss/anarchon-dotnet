@@ -18,7 +18,7 @@
     "check": "dotnet r format build test",
     "coverage:clean": "rm -rf coverage test/*/bin/*/*/TestResults",
     "coverage:run": "dotnet test -- --coverlet --coverlet-output-format cobertura",
-    "coverage:report": "dotnet reportgenerator -reports:'test/*/bin/*/*/TestResults/coverage.cobertura.xml' -targetdir:coverage -reporttypes:'Html;TextSummary' -assemblyfilters:'+Anarchon*;-Anarchon.Specification;-*.Tests' && cat coverage/Summary.txt",
+    "coverage:report": "dotnet reportgenerator -reports:'test/*/bin/*/*/TestResults/coverage.cobertura*.xml' -targetdir:coverage -reporttypes:'Html;TextSummary' -assemblyfilters:'+Anarchon*;-Anarchon.Specification;-*.Tests' && cat coverage/Summary.txt",
     "coverage:open": "if [ \"$TERM_PROGRAM\" = vscode ]; then code -r \"coverage/index.html\"; else $(command -v xdg-open || echo open) \"coverage/index.html\"; fi",
     "stryker": "dotnet r stryker:run stryker:open",
     "stryker:run": "cd test/Anarchon.Tests && NoCoverlet=true dotnet stryker --config-file ../../stryker-config.json",
