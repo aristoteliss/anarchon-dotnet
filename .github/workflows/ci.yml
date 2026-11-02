@@ -44,11 +44,11 @@ jobs:
           global-json-file: global.json
       - name: Start the test servers
         run: docker compose -f test/docker-compose.test.yml up -d --wait
-      - run: dotnet test -c Release -- --coverlet --coverlet-output-format cobertura
+      - run: dotnet test -c Release --results-directory TestResults --results-directory-layout per-module -- --coverlet --coverlet-output-format cobertura
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage-servers
-          path: test/*/bin/Release/*/TestResults/coverage.cobertura.xml
+          path: TestResults/*/*/coverage.cobertura.xml
           if-no-files-found: error
 
   # The brokers have a job of their own, as in the Node.js package: the main test job skips them.
@@ -64,12 +64,12 @@ jobs:
           global-json-file: global.json
       - name: Start the brokers
         run: docker compose -f test/docker-compose.test.yml --profile brokers up -d --wait rabbitmq nats
-      - run: dotnet test --project test/Anarchon.RabbitMQ.Tests -c Release -- --coverlet --coverlet-output-format cobertura
-      - run: dotnet test --project test/Anarchon.Nats.Tests -c Release -- --coverlet --coverlet-output-format cobertura
+      - run: dotnet test --project test/Anarchon.RabbitMQ.Tests -c Release --results-directory TestResults --results-directory-layout per-module -- --coverlet --coverlet-output-format cobertura
+      - run: dotnet test --project test/Anarchon.Nats.Tests -c Release --results-directory TestResults --results-directory-layout per-module -- --coverlet --coverlet-output-format cobertura
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: coverage-brokers
-          path: test/*/bin/Release/*/TestResults/coverage.cobertura.xml
+          path: TestResults/*/*/coverage.cobertura.xml
           if-no-files-found: error
 
   # One report from both test jobs: a summary on the run's page, the HTML report as an artifact.
