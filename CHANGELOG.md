@@ -4,6 +4,20 @@ Versions follow the Node.js package in their first two numbers: Anarchon for .NE
 algorithm and the stored data of `anarchon` 0.6.x, so their instances can share jobs. The last number
 belongs to each package.
 
+## Unreleased
+
+### Added
+
+- **`Anarchon.SqlServer`**: SQL Server 2016+ and Azure SQL on Microsoft.Data.SqlClient, with leases,
+  backups, catch-up and no overlapping runs, `UseSqlServer()` for the host, `BACKEND=sqlserver`
+  in the examples, and the `SqlServer` example (a worker service whose jobs write app tables in the
+  same database, keyed by the run's slot). Claims of one job take turns on an application lock; job names compare
+  case-sensitively. The Node.js package has no SQL Server backend.
+- **`Anarchon.Sql`**: `SqlDialect` members for databases whose SQL differs more: `KeyText` and
+  `Text` (column types), `LockHint` (a table hint instead of `FOR UPDATE`), `CreateTable`,
+  `CreateIndex`, `InsertIfNew` and `Page`. Their defaults produce the SQL used before, so existing
+  dialects and tables are unchanged.
+
 ## 0.6.0 (2026-11-02)
 
 The first release of Anarchon for .NET: the scheduler and its backends, with the algorithm and the

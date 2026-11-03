@@ -5,6 +5,7 @@
     <Project Path="src/Anarchon.Sql/Anarchon.Sql.csproj" />
     <Project Path="src/Anarchon.Postgres/Anarchon.Postgres.csproj" />
     <Project Path="src/Anarchon.Sqlite/Anarchon.Sqlite.csproj" />
+    <Project Path="src/Anarchon.SqlServer/Anarchon.SqlServer.csproj" />
     <Project Path="src/Anarchon.RabbitMQ/Anarchon.RabbitMQ.csproj" />
     <Project Path="src/Anarchon.Nats/Anarchon.Nats.csproj" />
   </Folder>
@@ -15,6 +16,7 @@
     <Project Path="test/Anarchon.Sql.Tests/Anarchon.Sql.Tests.csproj" />
     <Project Path="test/Anarchon.Postgres.Tests/Anarchon.Postgres.Tests.csproj" />
     <Project Path="test/Anarchon.Sqlite.Tests/Anarchon.Sqlite.Tests.csproj" />
+    <Project Path="test/Anarchon.SqlServer.Tests/Anarchon.SqlServer.Tests.csproj" />
     <Project Path="test/Anarchon.RabbitMQ.Tests/Anarchon.RabbitMQ.Tests.csproj" />
     <Project Path="test/Anarchon.Nats.Tests/Anarchon.Nats.Tests.csproj" />
   </Folder>
@@ -29,6 +31,7 @@
     <Project Path="examples/RunData/RunData.csproj" />
     <Project Path="examples/Attributes/Attributes.csproj" />
     <Project Path="examples/OwnClients/OwnClients.csproj" />
+    <Project Path="examples/SqlServer/SqlServer.csproj" />
     <Project Path="examples/Billing/Billing.csproj" />
     <Project Path="examples/CacheRefresh/CacheRefresh.csproj" />
     <Project Path="examples/NightlyExport/NightlyExport.csproj" />

@@ -29,6 +29,18 @@
       "console": "integratedTerminal"
     },
     {
+      "name": "Example: SqlServer (worker service on SQL Server; set ConnectionStrings__sqlserver)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/examples/SqlServer/bin/Debug/net10.0/SqlServer.dll",
+      "cwd": "${workspaceFolder}/examples/SqlServer",
+      "console": "integratedTerminal",
+      "env": {
+        "ConnectionStrings__sqlserver": "${env:ConnectionStrings__sqlserver}"
+      }
+    },
+    {
       "name": "Example: HttpApi (ASP.NET Core API)",
       "type": "coreclr",
       "request": "launch",

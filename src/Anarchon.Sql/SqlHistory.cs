@@ -76,7 +76,7 @@ internal sealed class SqlHistory(SqlTables tables, SqlDialect dialect, OpenConne
             LEFT JOIN {tables.Runs} r ON r.job = a.job AND r.slot = a.slot
             WHERE a.job = @job
             ORDER BY a.slot DESC, a.attempt DESC
-            LIMIT @limit
+            {dialect.Page("0", "@limit")}
             """;
         var rows = await SqlSession.RunAsync(open, session => session.QueryAsync(sql, ("job", job), ("limit", limit)), cancellationToken).ConfigureAwait(false);
 
@@ -96,7 +96,7 @@ internal sealed class SqlHistory(SqlTables tables, SqlDialect dialect, OpenConne
                           FROM {tables.Attempts}
                           WHERE job = @job
                           ORDER BY slot DESC, attempt DESC
-                          LIMIT 1 OFFSET @historySize)
+                          {dialect.Page("@historySize", "1")})
             """;
         await session.ExecuteAsync(sql, ("job", claim.Job), ("historySize", claim.HistorySize)).ConfigureAwait(false);
 

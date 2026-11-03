@@ -6,6 +6,7 @@
 //   BACKEND=redis      REDIS_URL (default localhost:6379), STRATEGY (default lease)
 //   BACKEND=postgres   POSTGRES_URL (an Npgsql connection string; default Host=localhost;Database=postgres)
 //   BACKEND=sqlite     SQLITE_FILE
+//   BACKEND=sqlserver  SQLSERVER_URL (a SqlClient connection string; required)
 //   BACKEND=nats       NATS_URL (default nats://localhost:4222), STRATEGY (default lease)
 //   BACKEND=rabbitmq   RABBITMQ_URL (default amqp://localhost:5672): claim only, no leases
 
@@ -16,6 +17,7 @@ using Anarchon.Postgres;
 using Anarchon.RabbitMQ;
 using Anarchon.Redis;
 using Anarchon.Sqlite;
+using Anarchon.SqlServer;
 
 namespace Anarchon.Examples;
 
@@ -42,6 +44,7 @@ public static class Example
         }),
         "postgres" => new PostgresBackend(new PostgresBackendOptions { ConnectionString = Env("POSTGRES_URL"), Table = $"example_{name}" }),
         "sqlite" => new SqliteBackend(new SqliteBackendOptions { ConnectionString = $"Data Source={SqliteFile()}", Table = $"example_{name}" }),
+        "sqlserver" => new SqlServerBackend(new SqlServerBackendOptions { ConnectionString = Env("SQLSERVER_URL") ?? throw new ArgumentException("BACKEND=sqlserver needs SQLSERVER_URL, a SqlClient connection string"), Table = $"example_{name}" }),
         "nats" => new NatsBackend(new NatsBackendOptions
         {
             ConnectionString = Env("NATS_URL") ?? "nats://localhost:4222",
@@ -50,7 +53,7 @@ public static class Example
             Prefix = $"example.{name}.",
         }),
         "rabbitmq" => new RabbitMQBackend(new RabbitMQBackendOptions { ConnectionString = Env("RABBITMQ_URL") ?? "amqp://localhost:5672", Prefix = $"example.{name}." }),
-        var other => throw new ArgumentException($"BACKEND must be redis, postgres, sqlite, nats or rabbitmq (got \"{other}\")"),
+        var other => throw new ArgumentException($"BACKEND must be redis, postgres, sqlite, sqlserver, nats or rabbitmq (got \"{other}\")"),
     };
 
     /// <summary>The SQLite file the examples share: SQLITE_FILE, or one in the temp folder.</summary>

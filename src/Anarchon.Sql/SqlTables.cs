@@ -23,52 +23,48 @@ internal sealed class SqlTables(string table)
     public IEnumerable<string> Create(SqlDialect dialect)
     {
         var bigint = dialect.BigInt;
+        var key = dialect.KeyText;
+        var text = dialect.Text;
         // An index lives in the table's schema, so its name drops the schema's dot.
         var index = $"{table.Replace('.', '_')}_status";
 
         return
         [
-            $"""
-            CREATE TABLE IF NOT EXISTS {Runs} (
-              job          TEXT    NOT NULL,
+            dialect.CreateTable(Runs, $"""
+              job          {key} NOT NULL,
               slot         {bigint} NOT NULL,
               attempt      INTEGER NOT NULL,
               max_attempts INTEGER NOT NULL,
               released     INTEGER NOT NULL DEFAULT 0,
-              token        TEXT    NOT NULL,
-              status       TEXT    NOT NULL,
-              instance_id  TEXT    NOT NULL,
+              token        {text} NOT NULL,
+              status       {key} NOT NULL,
+              instance_id  {text} NOT NULL,
               lease_until  {bigint} NOT NULL,
               PRIMARY KEY (job, slot)
-            )
-            """,
-            $"CREATE INDEX IF NOT EXISTS {index} ON {Runs} (job, status)",
-            $"""
-            CREATE TABLE IF NOT EXISTS {Attempts} (
-              job         TEXT     NOT NULL,
+            """),
+            dialect.CreateIndex(index, Runs, "job, status"),
+            dialect.CreateTable(Attempts, $"""
+              job         {key} NOT NULL,
               slot        {bigint} NOT NULL,
               attempt     INTEGER  NOT NULL,
-              instance_id TEXT     NOT NULL,
-              token       TEXT     NOT NULL,
-              reason      TEXT     NOT NULL,
+              instance_id {text} NOT NULL,
+              token       {text} NOT NULL,
+              reason      {text} NOT NULL,
               manual      SMALLINT NOT NULL,
               claimed_at  {bigint} NOT NULL,
-              status      TEXT,
+              status      {text},
               started_at  {bigint},
               finished_at {bigint},
               duration_ms {bigint},
-              error       TEXT,
+              error       {text},
               PRIMARY KEY (job, slot, attempt)
-            )
-            """,
+            """),
             .. dialect.ExtraTables(table),
-            $"""
-            CREATE TABLE IF NOT EXISTS {Meta} (
-              name  TEXT PRIMARY KEY,
-              value TEXT NOT NULL
-            )
-            """,
-            $"INSERT INTO {Meta} (name, value) VALUES ('format', '{StoreFormat.Current}') ON CONFLICT (name) DO NOTHING",
+            dialect.CreateTable(Meta, $"""
+              name  {key} PRIMARY KEY,
+              value {text} NOT NULL
+            """),
+            dialect.InsertIfNew(Meta, "name, value", $"'format', '{StoreFormat.Current}'"),
         ];
     }
 }
