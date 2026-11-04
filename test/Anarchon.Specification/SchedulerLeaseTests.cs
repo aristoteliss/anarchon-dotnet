@@ -360,7 +360,7 @@ public abstract class SchedulerLeaseTests(TestStore store)
     public async Task an_instance_that_skipped_a_run_as_an_overlap_backs_it_up_when_another_instance_starts_it()
     {
         var scope = await ScopeAsync("overlap");
-        var interval = TimeSpan.FromSeconds(2);
+        var interval = TimeSpan.FromSeconds(3);
         Scheduler Quick(IBackend backend, string id) => new(new SchedulerOptions
         {
             Backend = backend,
@@ -371,7 +371,7 @@ public abstract class SchedulerLeaseTests(TestStore store)
         });
         var a = Quick(store.Create(scope), "A");
         // B's claims of new runs arrive late: A decides first, and B asks for the second run after the first ended.
-        var b = Quick(new FaultyBackend(store.Create(scope), new Faults { NewClaimDelay = TimeSpan.FromMilliseconds(300) }), "B");
+        var b = Quick(new FaultyBackend(store.Create(scope), new Faults { NewClaimDelay = TimeSpan.FromSeconds(1) }), "B");
         var starts = new ConcurrentQueue<(string By, long Slot, int Attempt)>();
         long first = 0; // 0: no run started yet
         foreach (var scheduler in new[] { a, b })
@@ -382,7 +382,7 @@ public abstract class SchedulerLeaseTests(TestStore store)
                 var earlier = Interlocked.CompareExchange(ref first, ctx.Slot, 0);
                 var firstSlot = earlier == 0 ? ctx.Slot : earlier;
                 // The first run is still going when the second is due; the second ignores its token on attempt 1.
-                if (ctx.Slot == firstSlot) await Task.Delay(TimeSpan.FromMilliseconds(firstSlot + (long)interval.TotalMilliseconds + 150 - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()), CancellationToken.None);
+                if (ctx.Slot == firstSlot) await Task.Delay(TimeSpan.FromMilliseconds(firstSlot + (long)interval.TotalMilliseconds + 500 - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()), CancellationToken.None);
                 else if (ctx.Attempt == 1) await Task.Delay(TimeSpan.FromSeconds(2.5), CancellationToken.None);
             }, new() { Jitter = TimeSpan.Zero, CatchUp = TimeSpan.Zero });
         }
