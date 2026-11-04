@@ -33,7 +33,9 @@ public abstract class TestStore
 /// </summary>
 public static class RequiredServers
 {
-    private static readonly ConcurrentDictionary<string, Task<bool>> Probes = new();
+    // GetOrAdd may run its factory several times at once; the Lazy runs each probe once, because
+    // probes that create databases on a new server fail when they race each other.
+    private static readonly ConcurrentDictionary<string, Lazy<Task<bool>>> Probes = new();
 
     private static readonly HashSet<string> Required =
         [.. (Environment.GetEnvironmentVariable("REQUIRE_SERVERS") ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
@@ -45,7 +47,7 @@ public static class RequiredServers
     /// <param name="isUp">Answers whether it is running; never throws.</param>
     public static async Task RequireAsync(string name, string label, string where, Func<Task<bool>> isUp)
     {
-        if (await Probes.GetOrAdd(name, _ => isUp())) return;
+        if (await Probes.GetOrAdd(name, _ => new Lazy<Task<bool>>(isUp)).Value) return;
 
         var reason = $"{label} is not running at {where}";
         if (Required.Contains(name)) Assert.Fail($"{reason}, and REQUIRE_SERVERS names it");
