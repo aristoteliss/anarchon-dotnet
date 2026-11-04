@@ -4,7 +4,7 @@ Versions follow the Node.js package in their first two numbers: Anarchon for .NE
 algorithm and the stored data of `anarchon` 0.6.x, so their instances can share jobs. The last number
 belongs to each package.
 
-## Unreleased
+## 0.6.1 (2026-11-04)
 
 ### Added
 
