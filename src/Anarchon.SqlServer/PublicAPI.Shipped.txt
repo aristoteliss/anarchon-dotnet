@@ -1,1 +1,15 @@
 #nullable enable
+Anarchon.SqlServer.SqlServerBackend
+Anarchon.SqlServer.SqlServerBackend.SqlServerBackend(Anarchon.SqlServer.SqlServerBackendOptions! options) -> void
+Anarchon.SqlServer.SqlServerBackend.SqlServerBackend(string! connectionString) -> void
+Anarchon.SqlServer.SqlServerBackendOptions
+Anarchon.SqlServer.SqlServerBackendOptions.ConnectionString.get -> string?
+Anarchon.SqlServer.SqlServerBackendOptions.ConnectionString.set -> void
+Anarchon.SqlServer.SqlServerBackendOptions.SqlServerBackendOptions() -> void
+Anarchon.SqlServer.SqlServerBackendOptions.Table.get -> string!
+Anarchon.SqlServer.SqlServerBackendOptions.Table.set -> void
+Microsoft.Extensions.DependencyInjection.SqlServerAnarchonBuilderExtensions
+override Anarchon.SqlServer.SqlServerBackend.Name.get -> string!
+static Microsoft.Extensions.DependencyInjection.SqlServerAnarchonBuilderExtensions.UseSqlServer(this Anarchon.AnarchonBuilder! builder, string! connectionString) -> Anarchon.AnarchonBuilder!
+static Microsoft.Extensions.DependencyInjection.SqlServerAnarchonBuilderExtensions.UseSqlServer(this Anarchon.AnarchonBuilder! builder, System.Action<Anarchon.SqlServer.SqlServerBackendOptions!>! configure) -> Anarchon.AnarchonBuilder!
+static Microsoft.Extensions.DependencyInjection.SqlServerAnarchonBuilderExtensions.UseSqlServer(this Anarchon.AnarchonBuilder! builder, System.Action<System.IServiceProvider!, Anarchon.SqlServer.SqlServerBackendOptions!>! configure) -> Anarchon.AnarchonBuilder!
