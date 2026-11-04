@@ -5,7 +5,7 @@
 
 [**Documentation**](https://aristoteliss.github.io/anarchon-docs/) · [Quick start](https://aristoteliss.github.io/anarchon-docs/getting-started/quick-start/) · [ASP.NET Core](https://aristoteliss.github.io/anarchon-docs/recipes/aspnet-core/) · [.NET reference](https://aristoteliss.github.io/anarchon-docs/reference/dotnet/scheduler/) · [Guarantees and limits](https://aristoteliss.github.io/anarchon-docs/reference/guarantees/)
 
-Leaderless scheduling for .NET services, coordinated through the datastore you already run. Run the same jobs in every instance; an atomic claim in the store selects one runner for each scheduled slot. On Redis, Valkey, PostgreSQL, SQLite and NATS (`Lease`) a lease lets another instance retry a run whose runner stopped renewing it; RabbitMQ and NATS (`MsgId`) only pick the runner. That gives at-least-once execution after failures, not exactly-once side effects: handlers should be idempotent, and a frozen runner can briefly overlap its replacement.
+Leaderless scheduling for .NET services, coordinated through the datastore you already run. Run the same jobs in every instance; an atomic claim in the store selects one runner for each scheduled slot. On Redis, Valkey, PostgreSQL, SQL Server, SQLite and NATS (`Lease`) a lease lets another instance retry a run whose runner stopped renewing it; RabbitMQ and NATS (`MsgId`) only pick the runner. That gives at-least-once execution after failures, not exactly-once side effects: handlers should be idempotent, and a frozen runner can briefly overlap its replacement.
 
 Anarchon also handles what goes wrong in real clusters:
 - jobs that run longer than their interval
@@ -38,6 +38,7 @@ Not published to NuGet yet. Once it is:
 ```sh
 dotnet add package Anarchon.Redis      # Redis or Valkey; brings in Anarchon, the core
 dotnet add package Anarchon.Postgres   # or PostgreSQL
+dotnet add package Anarchon.SqlServer  # or SQL Server and Azure SQL
 dotnet add package Anarchon.Sqlite     # or a SQLite file, for the processes of one machine
 dotnet add package Anarchon.RabbitMQ   # or RabbitMQ: claim only, no leases
 dotnet add package Anarchon.Nats       # or NATS JetStream: claim only, or leases with NatsStrategy.Lease
@@ -73,7 +74,7 @@ A job method returns `Task`, `ValueTask` or nothing, and takes any of `JobContex
 
 1. **Every instance computes the same run times.** Each scheduled run has a time, called its *slot*. Intervals use a grid counted from 1970 UTC, so "every 10 seconds" means :00, :10, :20…. Cron jobs use the expression. All instances agree on the slots, whenever each one started.
 2. **Each instance waits a random delay.** It waits until the slot plus a random 0 to `Jitter` (default 2 s). The delay is what spreads the work across instances.
-3. **One atomic claim decides.** Each instance sends the same claim, which records the run unless it's already there: a Lua script in Redis, a short transaction in PostgreSQL and SQLite, a write at a known revision in a NATS key-value bucket. The store decides claims of a run one at a time, so exactly one instance wins.
+3. **One atomic claim decides.** Each instance sends the same claim, which records the run unless it's already there: a Lua script in Redis, a short transaction in PostgreSQL, SQL Server and SQLite, a write at a known revision in a NATS key-value bucket. The store decides claims of a run one at a time, so exactly one instance wins.
 4. **The winner runs the job under a lease.** It renews the lease every few seconds, and the other instances become its backups.
 
 ```
@@ -155,11 +156,12 @@ A value that can't be used throws `ArgumentException` or `ArgumentOutOfRangeExce
 
 ## Backends
 
-Redis, Valkey, PostgreSQL, SQLite and NATS with `NatsStrategy.Lease` get everything described above: leases, backups, no overlap, catch-up and hand-over on `StopAsync()`. RabbitMQ, and NATS with its default `MsgId` strategy, only make sure one instance wins each run, like the simple `StreamId` claim: they can't hold a lease that a backup could check.
+Redis, Valkey, PostgreSQL, SQL Server, SQLite and NATS with `NatsStrategy.Lease` get everything described above: leases, backups, no overlap, catch-up and hand-over on `StopAsync()`. RabbitMQ, and NATS with its default `MsgId` strategy, only make sure one instance wins each run, like the simple `StreamId` claim: they can't hold a lease that a backup could check.
 
 ```csharp
 new Scheduler(new SchedulerOptions { Backend = new RedisBackend("localhost:6379") });
 new Scheduler(new SchedulerOptions { Backend = new PostgresBackend("Host=db;Database=app;Username=app;Password=...") });
+new Scheduler(new SchedulerOptions { Backend = new SqlServerBackend("Server=db;Database=app;User Id=app;Password=...;Encrypt=true") });
 new Scheduler(new SchedulerOptions { Backend = new SqliteBackend("Data Source=/var/lib/myapp/jobs.db") });
 new Scheduler(new SchedulerOptions { Backend = new RabbitMQBackend("amqp://rabbit.internal") });
 new Scheduler(new SchedulerOptions { Backend = new NatsBackend("nats://nats.internal:4222") });
@@ -170,12 +172,13 @@ new Scheduler(new SchedulerOptions { Backend = new NatsBackend(new NatsBackendOp
 |---|---|---|---|
 | `Anarchon.Redis` | One Lua script per claim (see [Redis strategies](#redis-strategies)) | Yes (`Lease`, the default) | Redis 5+ or Valkey; StackExchange.Redis |
 | `Anarchon.Postgres` | One short transaction per claim. Its first statement writes the job's row in `<table>_jobs`, so claims of one job take turns | Yes | PostgreSQL 9.5+; Npgsql |
+| `Anarchon.SqlServer` | One short READ COMMITTED transaction per claim. It first takes an application lock on the job (`sp_getapplock`), so claims of one job take turns | Yes | SQL Server 2016+ or Azure SQL; Microsoft.Data.SqlClient |
 | `Anarchon.Sqlite` | One `BEGIN IMMEDIATE` transaction per claim; SQLite has one writer at a time | Yes | SQLite 3.24+ (bundled with Microsoft.Data.Sqlite) |
 | `Anarchon.RabbitMQ` | A gate queue per run that holds one message (`x-max-length: 1`, `reject-publish`); publisher confirms say who was first | No | RabbitMQ 3.9+; RabbitMQ.Client |
 | `Anarchon.Nats` (`MsgId`, the default) | JetStream publish with `Nats-Msg-Id: <job>:<slot>`; repeats come back as duplicates | No | JetStream enabled; NATS.Net |
 | `Anarchon.Nats` (`Lease`) | A write to the job's key in the key-value bucket `<stream>_RUNS`, only at the revision that was read; a refused write is decided again | Yes | nats-server 2.10+ with JetStream; NATS.Net |
 
-With a host, `UseRedis(...)`, `UsePostgres(...)`, `UseSqlite(...)`, `UseRabbitMQ(...)` or `UseNats(...)` picks the backend: a connection string, a lambda that sets the options, or one that also gets the app's services, to share a connection or data source the app registered:
+With a host, `UseRedis(...)`, `UsePostgres(...)`, `UseSqlServer(...)`, `UseSqlite(...)`, `UseRabbitMQ(...)` or `UseNats(...)` picks the backend: a connection string, a lambda that sets the options, or one that also gets the app's services, to share a connection or data source the app registered:
 
 ```csharp
 builder.Services.AddNpgsqlDataSource(builder.Configuration.GetConnectionString("postgres")!); // Npgsql.DependencyInjection
@@ -187,6 +190,14 @@ builder.Services.AddAnarchon().UsePostgres((services, options) => options.DataSo
 `PostgresBackendOptions` takes an Npgsql `ConnectionString` (the backend opens a pool and closes it on stop), or a `DataSource` your app already has (never disposed by Anarchon), and a `Table` (default `anarchon_runs`, may include a schema that exists: `jobs.cron_runs`).
 
 On start the backend creates four tables, if they don't exist: `anarchon_runs` (one row per run: attempt, token, status, lease end), `anarchon_runs_attempts` (one row per attempt: the history), `anarchon_runs_jobs` (one row per job, which claims of that job lock in turn) and `anarchon_runs_meta` (the store format). Services sharing a database need different table names. Leases use the database's clock.
+
+### SQL Server
+
+`SqlServerBackendOptions` takes a Microsoft.Data.SqlClient `ConnectionString` (required; connections come from SqlClient's pool for that string, which nothing closes on stop) and a `Table` (default `anarchon_runs`, may include a schema that exists: `jobs.cron_runs`). Azure SQL works the same way, with `Authentication=Active Directory Default` or any other method SqlClient supports.
+
+On start the backend creates `anarchon_runs`, `anarchon_runs_attempts` and `anarchon_runs_meta`, if they don't exist. Text columns are `NVARCHAR` with a binary collation, so job names compare case-sensitively whatever the database's collation, and a job name holds up to 400 characters. Claims read the run's rows with update locks, so they work the same with `READ_COMMITTED_SNAPSHOT` on (the Azure SQL default) or off. Leases use the database's clock (`SYSUTCDATETIME()`).
+
+The Node.js package has no SQL Server backend, so only .NET instances share these tables.
 
 ### SQLite
 
@@ -216,7 +227,7 @@ A SQLite file only coordinates the processes that open that same file: one machi
 
 ### The SQL lease store
 
-The SQL lease store is in the package `Anarchon.Sql` (an abstract `SqlBackend` and a `SqlDialect`), which `Anarchon.Postgres` and `Anarchon.Sqlite` bring in. Reference it directly only to put Anarchon on another database.
+The SQL lease store is in the package `Anarchon.Sql` (an abstract `SqlBackend` and a `SqlDialect`), which `Anarchon.Postgres`, `Anarchon.SqlServer` and `Anarchon.Sqlite` bring in. Reference it directly only to put Anarchon on another database.
 
 ### Redis strategies
 
@@ -235,7 +246,7 @@ With `Lease`, each job has these keys, all with one hash tag so Redis Cluster ke
 
 ## Running next to the Node.js package
 
-Each backend writes the same data as the Node.js package (the same Redis keys and Lua scripts, the same SQL tables and columns in PostgreSQL and SQLite, the same RabbitMQ queues, NATS subjects and bucket keys, and the same records), so .NET and Node.js instances can share jobs during a migration, or for good. With the same `Prefix` or `Table`, strategy and job names, each run still has one runner, either side can take over a run the other one left, and `HistoryAsync()` shows the runs of both. Interval jobs compute the same slots on both sides. Cron jobs use Cronos here and croner in Node.js; check unusual expressions on both before you mix them.
+Each backend writes the same data as the Node.js package (the same Redis keys and Lua scripts, the same SQL tables and columns in PostgreSQL and SQLite (SQL Server is .NET only), the same RabbitMQ queues, NATS subjects and bucket keys, and the same records), so .NET and Node.js instances can share jobs during a migration, or for good. With the same `Prefix` or `Table`, strategy and job names, each run still has one runner, either side can take over a run the other one left, and `HistoryAsync()` shows the runs of both. Interval jobs compute the same slots on both sides. Cron jobs use Cronos here and croner in Node.js; check unusual expressions on both before you mix them.
 
 Coming from the Node.js API:
 
@@ -277,7 +288,7 @@ pnpm dev                      # http://localhost:4321
 
 ## Examples
 
-Every example runs on a SQLite file in the temp folder unless `BACKEND` names another store (`redis`, `postgres`, `sqlite`, `nats`, `rabbitmq`; see `examples/Shared/Example.cs` for their variables), so most need no server. `.vscode/launch.json` has a debug configuration for each; start with "Example: Walkthrough", which stops before `StartAsync()` and lists where to step.
+Every example runs on a SQLite file in the temp folder unless `BACKEND` names another store (`redis`, `postgres`, `sqlserver`, `sqlite`, `nats`, `rabbitmq`; see `examples/Shared/Example.cs` for their variables), so most need no server. `.vscode/launch.json` has a debug configuration for each; start with "Example: Walkthrough", which stops before `StartAsync()` and lists where to step.
 
 ```sh
 dotnet run --project examples/QuickStart        # 3 processes: a graceful stop, a crash (Process.Kill), then downtime and catch-up
@@ -290,6 +301,7 @@ dotnet run --project examples/OptionsAndEvents  # every job option and every eve
 dotnet run --project examples/RunData           # run data: the scheduler's, a job's, a provider read at each run, RunNowAsync and SetData
 dotnet run --project examples/Attributes        # [Cron], [Every] and [At] without a host: Register with a prefix, a time zone and defaults
 dotnet run --project examples/OwnClients        # your own IConnectionMultiplexer, or NpgsqlDataSource with BACKEND=postgres
+dotnet run --project examples/SqlServer         # a worker service on SQL Server: app tables next to the scheduler's, work keyed by the run's slot
 ```
 
 Real-life setups, each a situation solved with a different set of options (the header of each file explains every choice):
@@ -302,14 +314,14 @@ dotnet run --project examples/Tenants              # per-tenant jobs and time zo
 BACKEND=nats STRATEGY=msg-id dotnet run --project examples/BrokerNotifications   # NATS or RabbitMQ, no leases: each run sends everything outstanding
 ```
 
-`Hosting` and `OwnClients` need Redis (or Postgres for `OwnClients`), and `BrokerNotifications` a broker; the others need nothing.
+`Hosting` and `OwnClients` need Redis (or Postgres for `OwnClients`), `SqlServer` a SQL Server (`ConnectionStrings__sqlserver`), and `BrokerNotifications` a broker; the others need nothing.
 
 ## Tests
 
-The tests run against real servers, and a server that isn't running is skipped. `test/docker-compose.test.yml` starts them on ports that leave a Redis on 6379 or a Postgres on 5432 alone:
+The tests run against real servers, and a server that isn't running is skipped. `test/docker-compose.test.yml` starts them on ports that leave a Redis on 6379, a Postgres on 5432 or a SQL Server on 1433 alone:
 
 ```sh
-docker compose -f test/docker-compose.test.yml up -d --wait   # Redis 8.6, Redis 7.0, Valkey, PostgreSQL 16
+docker compose -f test/docker-compose.test.yml up -d --wait   # Redis 8.6, Redis 7.0, Valkey, PostgreSQL 16, SQL Server 2022
 docker compose -f test/docker-compose.test.yml --profile brokers up -d --wait   # also RabbitMQ and NATS
 dotnet test                                                    # every test
 docker compose -f test/docker-compose.test.yml --profile brokers down   # remove them and their data
@@ -321,11 +333,12 @@ docker compose -f test/docker-compose.test.yml --profile brokers down   # remove
 | Redis 7.0 | `localhost:6380` | `REDIS7_URL` |
 | Valkey | `localhost:6390` | `VALKEY_URL` |
 | PostgreSQL 16 | `Host=localhost;Port=5433;Username=postgres;Password=postgres;Database=anarchon_test` | `POSTGRES_URL` (an Npgsql connection string) |
+| SQL Server 2022 | `Server=127.0.0.1,14330;Database=anarchon_test;User Id=sa;Password=Anarchon-test-1;TrustServerCertificate=true`; the tests create the database, and `anarchon_test_snapshot` with `READ_COMMITTED_SNAPSHOT` on | `SQLSERVER_URL` (a SqlClient connection string) |
 | SQLite (no server: one file per test) | the temporary folder | `SQLITE_DIR` |
 | RabbitMQ 3.13 (profile `brokers`) | `amqp://localhost:5672`, management on `http://localhost:15672` | `RABBITMQ_URL`, `RABBITMQ_MANAGEMENT_URL` |
 | NATS 2.11 with JetStream (profile `brokers`) | `nats://localhost:4222` | `NATS_URL` |
 
-To make a run fail when a server is missing, instead of skipping its tests, name the servers in `REQUIRE_SERVERS`: `REQUIRE_SERVERS=redis,redis-7,valkey,postgres,rabbitmq,nats dotnet test`. CI sets it; RabbitMQ and NATS run in a CI job of their own.
+To make a run fail when a server is missing, instead of skipping its tests, name the servers in `REQUIRE_SERVERS`: `REQUIRE_SERVERS=redis,redis-7,valkey,postgres,sqlserver,rabbitmq,nats dotnet test`. CI sets it; RabbitMQ and NATS run in a CI job of their own.
 
 This covers, for every backend and each Redis strategy and server: a race where three clients fight over 40 runs, retry-safety and history. For every backend with leases: the lease state machine step by step, and schedulers racing on one store, with hand-over on stop, takeover after a lost lease or a failed hand-over, heartbeats keeping a long run, `YieldAfterFailure`, overlap backups and catch-up. These shared tests live in `test/Anarchon.Specification`, and each backend's test project inherits them. `test/Anarchon.Sql.Tests` and `test/Anarchon.Sqlite.Tests` run them on SQLite files, so they need no server.
 

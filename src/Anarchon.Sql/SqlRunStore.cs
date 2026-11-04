@@ -156,7 +156,7 @@ internal sealed class SqlRunStore(SqlTables tables, SqlDialect dialect, OpenConn
     /// <summary>Refuses to overlap a live run of the job, and ends older runs whose runner died.</summary>
     private async Task<ClaimOutcome?> SettleOtherRunsAsync(SqlSession session, RunClaim claim, long now)
     {
-        var sql = $"SELECT slot, lease_until FROM {tables.Runs} WHERE job = @job AND status = 'running'{dialect.ForUpdate}";
+        var sql = $"SELECT slot, lease_until FROM {tables.Runs}{dialect.LockHint} WHERE job = @job AND status = 'running'{dialect.ForUpdate}";
         var others = await session.QueryAsync(sql, ("job", claim.Job)).ConfigureAwait(false);
 
         foreach (var other in others)
@@ -205,7 +205,7 @@ internal sealed class SqlRunStore(SqlTables tables, SqlDialect dialect, OpenConn
                            FROM {tables.Runs}
                            WHERE job = @job
                            ORDER BY slot DESC
-                           LIMIT 1 OFFSET @historySize)
+                           {dialect.Page("@historySize", "1")})
             """;
         var youngFrom = now - (long)(claim.Keep?.TotalMilliseconds ?? 0);
         await session.ExecuteAsync(sql, ("job", claim.Job), ("youngFrom", youngFrom), ("historySize", claim.HistorySize)).ConfigureAwait(false);
@@ -227,7 +227,7 @@ internal sealed class SqlRunStore(SqlTables tables, SqlDialect dialect, OpenConn
     {
         var sql = $"""
             SELECT attempt, max_attempts, released, token, status, lease_until
-            FROM {tables.Runs}
+            FROM {tables.Runs}{dialect.LockHint}
             WHERE job = @job AND slot = @slot{dialect.ForUpdate}
             """;
         var row = await session.QueryFirstAsync(sql, ("job", claim.Job), ("slot", claim.Slot)).ConfigureAwait(false);

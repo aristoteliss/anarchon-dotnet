@@ -138,7 +138,8 @@ public abstract class LeaseRulesTests(TestStore store)
         var stale = await fresh.Runs.ClaimAsync(Run(now - 30_000, "x", "A", TimeSpan.FromSeconds(5), maxAttempts: 1) with { MaxLate = maxLate }, CancellationToken.None);
         var recent = await fresh.Runs.ClaimAsync(Run(now - 1_000, "y", "A", TimeSpan.FromSeconds(5), maxAttempts: 1, overlap: OverlapPolicy.Allow) with { MaxLate = maxLate }, CancellationToken.None);
 
-        Assert.True(stale is ClaimOutcome.Late { By.TotalMilliseconds: >= 30_000 }, $"{stale}");
+        // The server's clock may trail the test's by a few milliseconds.
+        Assert.True(stale is ClaimOutcome.Late { By.TotalMilliseconds: >= 29_900 }, $"{stale}");
         Assert.IsType<ClaimOutcome.Won>(recent);
     }
 

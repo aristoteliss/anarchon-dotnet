@@ -14,6 +14,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Shared/*.cs" Link="Shared/%(Filename)%(Extension)" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)../src/Anarchon.Redis/Anarchon.Redis.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)../src/Anarchon.Postgres/Anarchon.Postgres.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)../src/Anarchon.SqlServer/Anarchon.SqlServer.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)../src/Anarchon.Sqlite/Anarchon.Sqlite.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)../src/Anarchon.RabbitMQ/Anarchon.RabbitMQ.csproj" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)../src/Anarchon.Nats/Anarchon.Nats.csproj" />

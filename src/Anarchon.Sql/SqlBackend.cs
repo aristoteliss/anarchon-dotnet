@@ -9,7 +9,7 @@ namespace Anarchon.Sql;
 /// <summary>
 /// A backend on an SQL database, with the same lease rules as the Redis Lease strategy: backup
 /// runners, retries, catch-up, hand-over on stop and no overlapping runs. Leases run on the
-/// database's clock. <c>PostgresBackend</c> and <c>SqliteBackend</c> derive from it; another database
+/// database's clock. <c>PostgresBackend</c>, <c>SqliteBackend</c> and <c>SqlServerBackend</c> derive from it; another database
 /// needs a <see cref="SqlDialect"/>, a way to open connections and a server check.
 /// </summary>
 /// <remarks>

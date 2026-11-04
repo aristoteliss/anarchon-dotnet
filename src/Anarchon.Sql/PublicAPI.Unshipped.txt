@@ -1,1 +1,8 @@
 #nullable enable
+virtual Anarchon.Sql.SqlDialect.CreateIndex(string! name, string! table, string! columns) -> string!
+virtual Anarchon.Sql.SqlDialect.CreateTable(string! name, string! columns) -> string!
+virtual Anarchon.Sql.SqlDialect.InsertIfNew(string! table, string! columns, string! values) -> string!
+virtual Anarchon.Sql.SqlDialect.KeyText.get -> string!
+virtual Anarchon.Sql.SqlDialect.LockHint.get -> string!
+virtual Anarchon.Sql.SqlDialect.Page(string! offset, string! limit) -> string!
+virtual Anarchon.Sql.SqlDialect.Text.get -> string!
