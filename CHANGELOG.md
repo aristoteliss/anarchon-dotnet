@@ -4,6 +4,12 @@ Versions follow the Node.js package in their first two numbers: Anarchon for .NE
 algorithm and the stored data of `anarchon` 0.6.x, so their instances can share jobs. The last number
 belongs to each package.
 
+## 0.6.2 (2026-11-10)
+
+### Changed
+
+- **`Anarchon.Redis`**: StackExchange.Redis 3.4.31 (was 3.4.29).
+
 ## 0.6.1 (2026-11-04)
 
 ### Added
