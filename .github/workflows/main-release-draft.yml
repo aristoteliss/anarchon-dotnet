@@ -1,0 +1,49 @@
+name: Release draft
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-draft
+  cancel-in-progress: true
+
+jobs:
+  draft:
+    name: Update the draft of the next release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the previous tag sets the range of the pull request list
+      # The draft takes the tag of VersionPrefix. When that tag exists, it takes the next patch version.
+      - name: Find the tag of the next release
+        run: |
+          version=$(sed -n 's:.*<VersionPrefix>\(.*\)</VersionPrefix>.*:\1:p' Directory.Build.props)
+          tag="v$version"
+          if git rev-parse -q --verify "refs/tags/$tag" > /dev/null; then
+            IFS=. read -r major minor patch <<< "$version"
+            tag="v$major.$minor.$((patch + 1))"
+          fi
+          echo "TAG=$tag" >> "$GITHUB_ENV"
+          echo "PREVIOUS=$(git describe --tags --abbrev=0 --match 'v*')" >> "$GITHUB_ENV"
+      - name: Write the pull requests since the previous tag
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" -f tag_name="$TAG" \
+            -f target_commitish="$GITHUB_SHA" -f previous_tag_name="$PREVIOUS" --jq .body > notes.md
+      # One draft only: the run edits the draft that exists, or creates it.
+      - name: Create or update the draft
+        run: |
+          draft=$(gh release list --json tagName,isDraft --jq '.[] | select(.isDraft) | .tagName' | head -n 1)
+          if [ -z "$draft" ]; then
+            gh release create "$TAG" --draft --title "$TAG" --target "$GITHUB_SHA" --notes-file notes.md
+            exit 0
+          fi
+          gh release edit "$draft" --tag "$TAG" --title "$TAG" --target "$GITHUB_SHA" --notes-file notes.md --draft

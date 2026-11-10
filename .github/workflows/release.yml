@@ -57,3 +57,50 @@ jobs:
         run: >-
           dotnet nuget push 'packed/*.nupkg' --api-key '${{ steps.login.outputs.NUGET_API_KEY }}'
           --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+  github-release:
+    name: Publish the GitHub release
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the previous tag sets the range of the pull request list
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: packages
+          path: packed
+      # The notes are the CHANGELOG.md section of this version, then the pull requests since the previous tag.
+      - name: Write the release notes
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v heading="## $version " 'index($0, heading) == 1 { found = 1; next } found && /^## / { exit } found' \
+            CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then
+            echo "::error::CHANGELOG.md has no section for $version"
+            exit 1
+          fi
+          previous=$(git describe --tags --abbrev=0 --match 'v*' "$GITHUB_REF_NAME^" 2> /dev/null || true)
+          if [ -n "$previous" ]; then
+            printf '\n' >> notes.md
+            gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" -f tag_name="$GITHUB_REF_NAME" \
+              -f previous_tag_name="$previous" --jq .body >> notes.md
+          fi
+      # The draft that main-release-draft.yml keeps up to date becomes this release.
+      - name: Publish the release
+        run: |
+          release=$(gh release list --json tagName --jq ".[] | select(.tagName == \"$GITHUB_REF_NAME\") | .tagName")
+          if [ -z "$release" ]; then
+            release=$(gh release list --json tagName,isDraft --jq '.[] | select(.isDraft) | .tagName' | head -n 1)
+          fi
+          if [ -z "$release" ]; then
+            gh release create "$GITHUB_REF_NAME" packed/*nupkg --title "$GITHUB_REF_NAME" --notes-file notes.md --verify-tag
+            exit 0
+          fi
+          gh release edit "$release" --tag "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md --verify-tag
+          gh release upload "$GITHUB_REF_NAME" packed/*nupkg --clobber
+          gh release edit "$GITHUB_REF_NAME" --draft=false --latest
