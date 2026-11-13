@@ -1,6 +1,5 @@
 // Copyright (C) 2026-present Aristotelis — see repository license.
 
-using System.Text.Json.Nodes;
 using Anarchon.Backends;
 
 namespace Anarchon.Nats;
@@ -40,19 +39,19 @@ internal static class LeaseRules
     {
         // A released lease (l = 0) stays released: a heartbeat sent before the release can arrive after it.
         var renewable = run.Token == token && run.IsRunning && run.LeaseEnd != 0;
-        return renewable ? run.With(("l", now + (long)lease.TotalMilliseconds)) : null;
+        return renewable ? run.Renewed(now + (long)lease.TotalMilliseconds) : null;
     }
 
     /// <summary>Ends the run, if it still carries the token.</summary>
     public static StoredRun? End(StoredRun run, string token, RunStatus status) =>
-        run.Token == token ? run.With(("s", RunText.ToText(status)), ("l", 0)) : null;
+        run.Token == token ? run.Ended(status) : null;
 
     /// <summary>Ends a live lease now and counts a hand-over, if the run still carries the token.</summary>
     public static StoredRun? Release(StoredRun run, string token, long now)
     {
         // Only a live lease can be released; a runner whose lease already ran out counts as having died.
         var live = run.Token == token && run.IsRunning && run.LeaseEnd >= now;
-        return live ? run.With(("l", 0), ("r", run.Released + 1)) : null;
+        return live ? run.HandedOver() : null;
     }
 
     /// <summary>An attempt without a result is Running only while it is the current attempt with a live lease.</summary>
@@ -87,16 +86,11 @@ internal static class LeaseRules
         var limit = run.MaxAttempts ?? claim.MaxAttempts;
         if (run.Attempt - run.Released >= limit)
         {
-            return new LeaseStep.Write(job.With(claim.Slot, run.With(("s", "interrupted"))), new ClaimOutcome.Done());
+            return new LeaseStep.Write(job.With(claim.Slot, run.Interrupted()), new ClaimOutcome.Done());
         }
 
         var attempt = run.Attempt + 1;
-        var next = run.With(
-            ("a", attempt),
-            ("m", limit),
-            ("t", claim.Token),
-            ("i", claim.InstanceId),
-            ("l", now + (long)claim.Lease.TotalMilliseconds));
+        var next = run.TakenOver(claim, attempt, limit, now);
         return new LeaseStep.Write(job.With(claim.Slot, next), new ClaimOutcome.Won(attempt));
     }
 
@@ -111,7 +105,7 @@ internal static class LeaseRules
     private static JobRuns EndDeadRuns(JobRuns job, long slot, long now) => job.WithRuns(job.Runs.Select(pair =>
     {
         var dead = pair.Run.IsRunning && pair.Run.LeaseEnd < now && pair.Slot < slot;
-        return dead ? (pair.Slot, pair.Run.With(("s", (JsonNode)"interrupted"))) : pair;
+        return dead ? (pair.Slot, pair.Run.Interrupted()) : pair;
     }));
 
     /// <summary>

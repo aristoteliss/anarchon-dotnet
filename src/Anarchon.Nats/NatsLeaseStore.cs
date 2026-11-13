@@ -20,7 +20,7 @@ namespace Anarchon.Nats;
 /// one writes it. Heartbeat, release and finish are the same read, decide and write, and change the
 /// run only while it carries the caller's token. History stays in the backend's stream.
 /// </remarks>
-internal sealed class NatsLeaseStore(Func<CancellationToken, Task<JetStreamState>> state, string bucket, string prefix, int? replicas) : IRunStore
+internal sealed class NatsLeaseStore(Func<CancellationToken, Task<JetStreamState>> state, string bucket, Subjects subjects, int? replicas) : IRunStore
 {
     /// <summary>How many times in a row a write may lose its race to another instance before the call fails.</summary>
     private const int WriteTries = 20;
@@ -148,7 +148,7 @@ internal sealed class NatsLeaseStore(Func<CancellationToken, Task<JetStreamState
         var (_, js) = await state(cancellationToken).ConfigureAwait(false);
         // The ID makes a publish the client sends twice one record.
         var options = new NatsJSPubOpts { MsgId = $"{claim.Job}:{claim.Slot}:{attempt}" };
-        var ack = await js.PublishAsync($"{prefix}{claim.Job}.claims", StoredRecord.WonAttempt(claim, attempt, now), NatsRawSerializer<byte[]>.Default, options, cancellationToken: cancellationToken).ConfigureAwait(false);
+        var ack = await js.PublishAsync(subjects.Claims(claim.Job), StoredRecord.WonAttempt(claim, attempt, now), NatsRawSerializer<byte[]>.Default, options, cancellationToken: cancellationToken).ConfigureAwait(false);
         if (ack.Error is { } error) throw new NatsJSApiException(error);
     }
 

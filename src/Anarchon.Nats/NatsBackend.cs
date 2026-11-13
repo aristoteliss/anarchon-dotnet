@@ -46,6 +46,7 @@ public sealed partial class NatsBackend : IBackend
     private const string DefaultConnectionString = "nats://localhost:4222";
 
     private readonly NatsBackendOptions _options;
+    private readonly Subjects _subjects;
     private readonly NatsLeaseStore? _lease;
     private readonly Lock _gate = new();
     private Task<JetStreamState>? _state;
@@ -82,8 +83,9 @@ public sealed partial class NatsBackend : IBackend
         RefuseInvalid(options);
 
         _options = Copy(options);
+        _subjects = new Subjects(options.Prefix);
         _historySize = options.HistorySize;
-        if (Strategy == NatsStrategy.Lease) _lease = new NatsLeaseStore(StateAsync, $"{options.Stream}_RUNS", options.Prefix, options.Replicas);
+        if (Strategy == NatsStrategy.Lease) _lease = new NatsLeaseStore(StateAsync, $"{options.Stream}_RUNS", _subjects, options.Replicas);
     }
 
     /// <summary><c>nats</c>, or <c>nats:lease</c> with the Lease strategy.</summary>
@@ -170,7 +172,7 @@ public sealed partial class NatsBackend : IBackend
 
         var (_, js) = await StateAsync(cancellationToken).ConfigureAwait(false);
         var options = new NatsJSPubOpts { MsgId = $"{input.Job}:{input.Slot}" };
-        var ack = await PublishAsync(js, Subject(input.Job, "claims"), StoredRecord.Claim(input, manual: false), options, cancellationToken).ConfigureAwait(false);
+        var ack = await PublishAsync(js, _subjects.Claims(input.Job), StoredRecord.Claim(input, manual: false), options, cancellationToken).ConfigureAwait(false);
         if (!ack.Duplicate) return true;
 
         // A duplicate: normally another instance won. It is ours when the client sent the publish twice.
@@ -190,7 +192,7 @@ public sealed partial class NatsBackend : IBackend
         if (_lease is not null) return await _lease.ClaimManualRunAsync(input, cancellationToken).ConfigureAwait(false);
 
         var (_, js) = await StateAsync(cancellationToken).ConfigureAwait(false);
-        await PublishAsync(js, Subject(input.Job, "claims"), StoredRecord.Claim(input, manual: true), null, cancellationToken).ConfigureAwait(false);
+        await PublishAsync(js, _subjects.Claims(input.Job), StoredRecord.Claim(input, manual: true), null, cancellationToken).ConfigureAwait(false);
         return null;
     }
 
@@ -205,7 +207,7 @@ public sealed partial class NatsBackend : IBackend
     {
         ArgumentNullException.ThrowIfNull(result);
         var (_, js) = await StateAsync(cancellationToken).ConfigureAwait(false);
-        await PublishAsync(js, Subject(job, "results"), StoredRecord.Result(result), null, cancellationToken).ConfigureAwait(false);
+        await PublishAsync(js, _subjects.Results(job), StoredRecord.Result(result), null, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -219,7 +221,7 @@ public sealed partial class NatsBackend : IBackend
     public async Task<IReadOnlyList<RunRecord>> HistoryAsync(string job, int limit, CancellationToken cancellationToken)
     {
         var (_, js) = await StateAsync(cancellationToken).ConfigureAwait(false);
-        var filter = $"{_options.Prefix}{job}.*";
+        var filter = _subjects.OfJob(job);
         var count = await StreamHistory.CountAsync(js, _options.Stream, filter, cancellationToken).ConfigureAwait(false);
         if (count == 0) return [];
 
@@ -296,7 +298,7 @@ public sealed partial class NatsBackend : IBackend
             historySize = _historySize;
         }
 
-        var settings = new StreamSettings(_options.Stream, $"{_options.Prefix}>", _options.DuplicateWindow, historySize, _options.Replicas);
+        var settings = new StreamSettings(_options.Stream, _subjects.All, _options.DuplicateWindow, historySize, _options.Replicas);
         await JetStreamSetup.EnsureStreamAsync(js, settings, cancellationToken).ConfigureAwait(false);
         lock (_gate)
         {
@@ -320,7 +322,6 @@ public sealed partial class NatsBackend : IBackend
         }
     }
 
-    private string Subject(string job, string kind) => $"{_options.Prefix}{job}.{kind}";
 
     private static async Task<PubAckResponse> PublishAsync(INatsJSContext js, string subject, byte[] record, NatsJSPubOpts? options, CancellationToken cancellationToken)
     {
@@ -349,11 +350,20 @@ public sealed partial class NatsBackend : IBackend
         if (options.HistorySize < 1) throw new ArgumentOutOfRangeException(nameof(options), $"HistorySize must be at least 1 (got {options.HistorySize})");
         if (options.Replicas is < 1) throw new ArgumentOutOfRangeException(nameof(options), $"Replicas must be at least 1 (got {options.Replicas})");
         if (string.IsNullOrEmpty(options.Stream) || options.Prefix is null) throw new ArgumentException("Stream and Prefix must be set", nameof(options));
+        RefuseOpenPrefix(options.Prefix);
 
         if (options.Strategy == NatsStrategy.Lease && !SimpleName().IsMatch(options.Stream))
         {
             throw new ArgumentException($"With the Lease strategy, the stream name \"{options.Stream}\" may only contain letters, digits, \"_\" and \"-\" (it names the bucket \"<stream>_RUNS\")", nameof(options));
         }
+    }
+
+    /// <summary>Subjects are <c>&lt;prefix&gt;&lt;job&gt;.claims</c>: without the dot the stream's subject <c>&lt;prefix&gt;&gt;</c> matches none of them.</summary>
+    private static void RefuseOpenPrefix(string prefix)
+    {
+        if (prefix.Length == 0 || prefix.EndsWith('.')) return;
+
+        throw new ArgumentException($"Prefix \"{prefix}\" must end with \".\", such as \"{prefix}.\"", nameof(prefix));
     }
 
     /// <summary>A copy, so a later change to the caller's options object changes nothing here.</summary>
@@ -371,4 +381,18 @@ public sealed partial class NatsBackend : IBackend
 
     [GeneratedRegex("^[A-Za-z0-9_-]+$")]
     private static partial Regex SimpleName();
+}
+
+/// <summary>The subjects of one backend: a job's claims and results go to <c>&lt;prefix&gt;&lt;job&gt;.claims</c> and <c>.results</c>.</summary>
+internal readonly record struct Subjects(string Prefix)
+{
+    /// <summary>Every subject of the backend: what its stream stores.</summary>
+    public string All => $"{Prefix}>";
+
+    public string Claims(string job) => $"{Prefix}{job}.claims";
+
+    public string Results(string job) => $"{Prefix}{job}.results";
+
+    /// <summary>The claims and the results of one job.</summary>
+    public string OfJob(string job) => $"{Prefix}{job}.*";
 }
