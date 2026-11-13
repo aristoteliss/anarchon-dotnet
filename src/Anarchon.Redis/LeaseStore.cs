@@ -25,6 +25,13 @@ internal sealed class LeaseStore(Func<Task<IDatabase>> database, string prefix) 
 
     private const int MaxOrderedAttempts = 99;
 
+    /// <summary>
+    /// How many results stay for each run of HistorySize. A result belongs to one attempt, and the
+    /// stream of attempts is trimmed with <c>MAXLEN ~</c>, which can leave more entries than
+    /// HistorySize: twice as many results stay, so those entries keep theirs.
+    /// </summary>
+    private const int ResultsPerRun = 2;
+
     public async Task<ClaimOutcome> ClaimAsync(RunClaim claim, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(claim);
@@ -77,7 +84,9 @@ internal sealed class LeaseStore(Func<Task<IDatabase>> database, string prefix) 
         var score = ended + (Math.Min(result.Attempt, MaxOrderedAttempts) / AttemptsPerMs);
         await db.SortedSetAddAsync(key, StoredData.ToJson(result), score).ConfigureAwait(false);
 
-        await db.SortedSetRemoveRangeByRankAsync(key, 0, -((historySize * 2L) + 1)).ConfigureAwait(false);
+        // Ranks count from the oldest result: all before the newest `kept` go.
+        var kept = (long)historySize * ResultsPerRun;
+        await db.SortedSetRemoveRangeByRankAsync(key, 0, -(kept + 1)).ConfigureAwait(false);
         if (historyTtl is { } ttl)
         {
             var oldest = result.FinishedAt.ToUnixTimeMilliseconds() - (long)ttl.TotalMilliseconds;

@@ -22,7 +22,10 @@ internal static class HistoryStream
     /// <summary>The newest chunk has fully arrived once no delivery came for this long.</summary>
     private static readonly TimeSpan QuietAfterDelivery = TimeSpan.FromMilliseconds(60);
 
-    /// <summary>A stream that delivered nothing for this long is empty.</summary>
+    /// <summary>
+    /// A stream that delivered nothing for this long is empty. A broker that takes longer to send the
+    /// first record gives an empty history, without an error.
+    /// </summary>
     private static readonly TimeSpan EmptyAfter = TimeSpan.FromMilliseconds(300);
 
     /// <summary>A read stops after this long, with what arrived, even if the last record never came.</summary>

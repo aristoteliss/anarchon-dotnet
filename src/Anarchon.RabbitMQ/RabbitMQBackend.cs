@@ -57,6 +57,18 @@ public sealed partial class RabbitMQBackend : IBackend
 
     private const int MaxPrefetch = 2_000;
 
+    /// <summary>A run is two records in the history stream: its claim and its result.</summary>
+    private const int RecordsPerRun = 2;
+
+    /// <summary>Records a history read takes beyond its limit, for manual runs among them.</summary>
+    private const int ExtraRecords = 20;
+
+    /// <summary>
+    /// Deliveries the broker may send beyond the records a history read asks for, without waiting for
+    /// their acks: the prefetch covers the whole read, so the read never stalls on it.
+    /// </summary>
+    private const int PrefetchMargin = 30;
+
     /// <summary>3.9: the first version with stream queues, which hold the history.</summary>
     private static readonly Version MinVersion = new(3, 9);
 
@@ -252,9 +264,9 @@ public sealed partial class RabbitMQBackend : IBackend
 
     private async Task<IReadOnlyList<RunRecord>> ReadHistoryAsync(IChannel channel, string job, int limit, CancellationToken cancellationToken)
     {
-        // Each run is a claim and a result: read twice the limit, and a few more for manual runs.
-        var wanted = (2L * limit) + 20;
-        await channel.BasicQosAsync(0, (ushort)Math.Min(wanted + 30, MaxPrefetch), global: false, cancellationToken).ConfigureAwait(false);
+        var wanted = ((long)limit * RecordsPerRun) + ExtraRecords;
+        var prefetch = (ushort)Math.Min(wanted + PrefetchMargin, MaxPrefetch);
+        await channel.BasicQosAsync(0, prefetch, global: false, cancellationToken).ConfigureAwait(false);
         var queue = HistoryQueue(job);
         var end = await HistoryStream.LastOffsetAsync(channel, queue, cancellationToken).ConfigureAwait(false);
         if (end is null) return [];
