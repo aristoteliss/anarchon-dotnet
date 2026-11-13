@@ -190,25 +190,7 @@ public abstract partial class SqlBackend : IBackend
         {
             await CheckServerAsync(connection, CancellationToken.None).ConfigureAwait(false);
             var session = new SqlSession(connection, null, CancellationToken.None);
-            foreach (var statement in _tables.Create(_dialect))
-            {
-                await CreateAsync(session, statement).ConfigureAwait(false);
-            }
-
-            var format = await session.QueryFirstAsync($"SELECT value FROM {_tables.Meta} WHERE name = @name", ("name", "format")).ConfigureAwait(false);
-            StoreFormat.Check(format?.Text("value"), $"The table \"{_tables.Runs}\"");
-        }
-    }
-
-    private async Task CreateAsync(SqlSession session, string statement)
-    {
-        try
-        {
-            await session.ExecuteAsync(statement).ConfigureAwait(false);
-        }
-        catch (DbException error) when (_dialect.IsAlreadyCreated(error))
-        {
-            // Another instance created it at the same moment.
+            await _tables.EnsureAsync(session, _dialect).ConfigureAwait(false);
         }
     }
 

@@ -1,5 +1,6 @@
 // Copyright (C) 2026-present Aristotelis — see repository license.
 
+using System.Data.Common;
 using Anarchon.Backends;
 
 namespace Anarchon.Sql;
@@ -10,6 +11,9 @@ namespace Anarchon.Sql;
 /// </summary>
 internal sealed class SqlTables(string table)
 {
+    /// <summary>The name of the row in the meta table that holds the store format.</summary>
+    private const string FormatName = "format";
+
     /// <summary>One row per run: its attempt, the current token, its status and the lease end.</summary>
     public string Runs => table;
 
@@ -19,8 +23,27 @@ internal sealed class SqlTables(string table)
     /// <summary>Name and value pairs; holds the store format.</summary>
     public string Meta => $"{table}_meta";
 
+    /// <summary>Creates the tables that are missing, then refuses tables in a store format newer than this version reads.</summary>
+    public async Task EnsureAsync(SqlSession session, SqlDialect dialect)
+    {
+        foreach (var statement in Create(dialect))
+        {
+            try
+            {
+                await session.ExecuteAsync(statement).ConfigureAwait(false);
+            }
+            catch (DbException error) when (dialect.IsAlreadyCreated(error))
+            {
+                // Another instance created it at the same moment.
+            }
+        }
+
+        var format = await session.QueryFirstAsync($"SELECT value FROM {Meta} WHERE name = @name", ("name", FormatName)).ConfigureAwait(false);
+        StoreFormat.Check(format?.Text("value"), $"The table \"{Runs}\"");
+    }
+
     /// <summary>The statements that create every table, each safe to run again.</summary>
-    public IEnumerable<string> Create(SqlDialect dialect)
+    private IEnumerable<string> Create(SqlDialect dialect)
     {
         var bigint = dialect.BigInt;
         var key = dialect.KeyText;
@@ -64,7 +87,7 @@ internal sealed class SqlTables(string table)
               name  {key} PRIMARY KEY,
               value {text} NOT NULL
             """),
-            dialect.InsertIfNew(Meta, "name, value", $"'format', '{StoreFormat.Current}'"),
+            dialect.InsertIfNew(Meta, "name, value", $"'{FormatName}', '{StoreFormat.Current}'"),
         ];
     }
 }
