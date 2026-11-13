@@ -31,12 +31,11 @@ public sealed partial class Scheduler
     {
         ArgumentNullException.ThrowIfNull(expression);
         options ??= new CronJobOptions();
-        RefuseTaken(name);
 
         Scheduling.Schedule schedule;
         try
         {
-            schedule = CronSchedule.Create(expression, options.TimeZone ?? _defaults.TimeZone, Now());
+            schedule = CronSchedule.Create(expression, options.TimeZone ?? _settings.Defaults.TimeZone, Now());
         }
         catch (CronFormatException error)
         {
@@ -73,12 +72,11 @@ public sealed partial class Scheduler
     {
         options ??= new EveryJobOptions();
         var intervalMs = (long)interval.TotalMilliseconds;
-        if (intervalMs < 1_000)
+        if (intervalMs < EverySchedule.MinIntervalMs)
         {
             throw new ArgumentOutOfRangeException(nameof(interval), interval, $"Job \"{name}\": the interval must be at least 1s (got {intervalMs} ms)");
         }
 
-        RefuseTaken(name);
         var offsetMs = (long)(options.Offset ?? TimeSpan.Zero).TotalMilliseconds;
         return Add(name, new EverySchedule(intervalMs, offsetMs), handler, options);
     }
@@ -98,7 +96,6 @@ public sealed partial class Scheduler
     /// </example>
     public Scheduler At(string name, DateTimeOffset when, Func<JobContext, Task> handler, JobOptions? options = null)
     {
-        RefuseTaken(name);
         return Add(name, new OnceSchedule(when.ToUnixTimeMilliseconds()), handler, options ?? new JobOptions());
     }
 
@@ -298,48 +295,44 @@ public sealed partial class Scheduler
         var duplicate = jobs.GroupBy(job => job.Name).FirstOrDefault(group => group.Count() > 1);
         if (duplicate is not null) throw Taken(duplicate.Key);
 
-        bool running;
-        lock (_gate)
-        {
-            var taken = jobs.FirstOrDefault(job => _registry.ContainsKey(job.Name));
-            if (taken is not null) throw Taken(taken.Name);
-            jobs.ForEach(job => _registry.Add(job.Name, job));
-            running = _state == State.Running;
-        }
-
-        if (running) jobs.ForEach(Schedule);
-        return this;
+        return AddAll(jobs);
     }
 
     private JobInput ToInput(DeclaredJob declared, Func<DeclaredJob, JobContext, Task> invoke, RegisterOptions options)
     {
         var name = $"{options.Prefix}{declared.Name}";
-        var (schedule, jobOptions) = declared.ToSchedule(name, options, _defaults.TimeZone, Now());
-        return new JobInput(name, schedule, ctx => invoke(declared, ctx), jobOptions, _defaults, Backend);
+        var (schedule, jobOptions) = declared.ToSchedule(name, options, _settings.Defaults.TimeZone, Now());
+        return new JobInput(name, schedule, ctx => invoke(declared, ctx), jobOptions, _settings.Defaults, Backend);
     }
 
-    private Scheduler Add(string name, Scheduling.Schedule schedule, Func<JobContext, Task> handler, JobOptions options)
-    {
-        var job = JobFactory.Create(new JobInput(name, schedule, handler, options, _defaults, Backend));
+    private Scheduler Add(string name, Scheduling.Schedule schedule, Func<JobContext, Task> handler, JobOptions options) =>
+        AddAll([JobFactory.Create(new JobInput(name, schedule, handler, options, _settings.Defaults, Backend))]);
 
+    /// <summary>Registers all the jobs or none: a name that is taken refuses the whole call.</summary>
+    private Scheduler AddAll(IReadOnlyList<Job> jobs)
+    {
         bool running;
         lock (_gate)
         {
-            if (!_registry.TryAdd(name, job)) throw Taken(name);
+            var taken = jobs.FirstOrDefault(job => _registry.ContainsKey(job.Name));
+            if (taken is not null) throw Taken(taken.Name);
+
+            foreach (var job in jobs)
+            {
+                _registry.Add(job.Name, job);
+            }
+
             running = _state == State.Running;
         }
 
-        if (running) Schedule(job);
-        return this;
-    }
+        if (!running) return this;
 
-    private void RefuseTaken(string name)
-    {
-        ArgumentNullException.ThrowIfNull(name);
-        lock (_gate)
+        foreach (var job in jobs)
         {
-            if (_registry.ContainsKey(name)) throw Taken(name);
+            Schedule(job);
         }
+
+        return this;
     }
 
     private static AnarchonException Taken(string name) =>

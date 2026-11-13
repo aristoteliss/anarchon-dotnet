@@ -1,7 +1,5 @@
 // Copyright (C) 2026-present Aristotelis — see repository license.
 
-using Anarchon.Backends;
-
 namespace Anarchon.Scheduling;
 
 /// <summary>
@@ -10,32 +8,28 @@ namespace Anarchon.Scheduling;
 /// </summary>
 internal interface ISchedulerCore
 {
-    /// <summary>This instance's name: the runner in its claims, and the instance in events and history.</summary>
-    string InstanceId { get; }
-
-    IBackend Backend { get; }
-
-    /// <summary>Lease backends: how long a lease lasts without a heartbeat, in ms.</summary>
-    long LeaseMs { get; }
-
-    /// <summary>Lease backends: how often a runner renews its lease, in ms; backups check every 1 to 2 of these.</summary>
-    long HeartbeatMs { get; }
-
-    TimeProvider Time { get; }
+    /// <summary>The scheduler's options as read at construction: they never change.</summary>
+    SchedulerSettings Settings { get; }
 
     /// <summary>The scheduler's data as it is now: a value, or a provider to call when a run starts.</summary>
     object? SchedulerData { get; }
 
-    /// <summary>Between start and stop. Timers and background checks do nothing outside it.</summary>
-    bool IsRunning { get; }
+    /// <summary>
+    /// The scheduler is between start and stop and the job is still registered. Timers and background
+    /// checks start nothing when this is false.
+    /// </summary>
+    bool CanStart(Job job);
 
-    /// <summary>Stop has returned (or start was never called): nothing is written to the backend any more.</summary>
-    bool IsIdle { get; }
+    /// <summary>
+    /// A run that began under <paramref name="stop"/> may still write to the backend: stop has not
+    /// returned, and no later start replaced the lifecycle the run belongs to.
+    /// </summary>
+    bool CanWrite(CancellationToken stop);
 
     /// <summary>Cancelled when stop is called. Every start makes a new one.</summary>
     CancellationToken StopToken { get; }
 
-    /// <summary>Unix milliseconds, from <see cref="Time"/>.</summary>
+    /// <summary>Unix milliseconds, from <see cref="SchedulerSettings.Time"/>.</summary>
     long Now();
 
     /// <summary>Connects the backend once; later calls wait for the same connection.</summary>

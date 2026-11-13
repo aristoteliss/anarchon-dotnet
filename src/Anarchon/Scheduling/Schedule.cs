@@ -35,6 +35,9 @@ internal abstract class Schedule
 /// </summary>
 internal sealed class EverySchedule : Schedule
 {
+    /// <summary>The shortest interval a job accepts.</summary>
+    public const long MinIntervalMs = 1_000;
+
     private readonly long _intervalMs;
     private readonly long _offsetMs;
 

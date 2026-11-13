@@ -13,7 +13,7 @@ internal sealed class ClaimOnlyRunner(ISchedulerCore core, Executor executor)
     /// <summary>A scheduled run is due: claims it, and runs it if this instance won. Never throws.</summary>
     public async Task RunAsync(Job job, long slot, CancellationToken stop)
     {
-        var input = Claims.Input(core.InstanceId, job, slot);
+        var input = Claims.Input(core.Settings.InstanceId, job, slot);
         var won = await ClaimAsync(job, input, stop).ConfigureAwait(false);
         if (won is null) return;
 
@@ -25,7 +25,7 @@ internal sealed class ClaimOnlyRunner(ISchedulerCore core, Executor executor)
 
         try
         {
-            await core.Backend.RecordClaimAsync(input, CancellationToken.None).ConfigureAwait(false);
+            await core.Settings.Backend.RecordClaimAsync(input, CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception error)
         {
@@ -44,8 +44,8 @@ internal sealed class ClaimOnlyRunner(ISchedulerCore core, Executor executor)
         var run = new Execution(1, RunReason.Manual, stop) { Data = data };
         if (stop.IsCancellationRequested) return await executor.ExecuteAsync(job, requested, run, claimed: false).ConfigureAwait(false);
 
-        var input = Claims.Input(core.InstanceId, job, requested);
-        var recorded = await core.Backend.RecordManualRunAsync(input, CancellationToken.None).ConfigureAwait(false);
+        var input = Claims.Input(core.Settings.InstanceId, job, requested);
+        var recorded = await core.Settings.Backend.RecordManualRunAsync(input, CancellationToken.None).ConfigureAwait(false);
         return await executor.ExecuteAsync(job, recorded ?? requested, run).ConfigureAwait(false);
     }
 
@@ -61,7 +61,7 @@ internal sealed class ClaimOnlyRunner(ISchedulerCore core, Executor executor)
             await core.PrepareAsync(job).ConfigureAwait(false);
             if (stop.IsCancellationRequested) return null;
 
-            return await core.Backend.ClaimAsync(input, CancellationToken.None).ConfigureAwait(false);
+            return await core.Settings.Backend.ClaimAsync(input, CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception error)
         {
@@ -71,7 +71,7 @@ internal sealed class ClaimOnlyRunner(ISchedulerCore core, Executor executor)
     }
 
     private void EmitTaken(Job job, long slot) =>
-        core.OnSkipped(new SkipEvent { Job = job.Name, Slot = slot, InstanceId = core.InstanceId, Reason = SkipReason.Taken });
+        core.OnSkipped(new SkipEvent { Job = job.Name, Slot = slot, InstanceId = core.Settings.InstanceId, Reason = SkipReason.Taken });
 }
 
 /// <summary>What an instance sends to claim a run.</summary>

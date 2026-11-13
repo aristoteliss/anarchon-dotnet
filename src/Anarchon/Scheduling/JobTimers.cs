@@ -11,7 +11,7 @@ internal sealed class JobTimers(ISchedulerCore core, Action<Job, long> onDue)
     /// <summary>Schedules the job's next run on this instance: run time plus a random 0 to jitter delay.</summary>
     public void Arm(Job job)
     {
-        if (!core.IsRunning || job.Removed) return;
+        if (!core.CanStart(job)) return;
 
         var slot = job.Schedule.Next(core.Now());
         lock (job.Gate)
@@ -42,7 +42,7 @@ internal sealed class JobTimers(ISchedulerCore core, Action<Job, long> onDue)
         {
             job.Timer?.Dispose();
             var generation = ++job.TimerGeneration;
-            job.Timer = core.Time.CreateTimer(
+            job.Timer = core.Settings.Time.CreateTimer(
                 _ => Wake(job, generation, at, then),
                 null,
                 TimeSpan.FromMilliseconds(waitMs),
@@ -60,7 +60,7 @@ internal sealed class JobTimers(ISchedulerCore core, Action<Job, long> onDue)
             job.Timer = null;
         }
 
-        if (!core.IsRunning || job.Removed) return;
+        if (!core.CanStart(job)) return;
         if (core.Now() < at) SleepUntil(job, at, then);
         else then();
     }

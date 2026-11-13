@@ -85,14 +85,14 @@ internal sealed class Executor(ISchedulerCore core)
         var status = StatusOf(run, failure);
 
         // After stop has returned, nothing is written any more (the lease runs out on its own).
-        var stopped = !claimed || core.IsIdle || run.Parent != core.StopToken;
+        var stopped = !claimed || !core.CanWrite(run.Parent);
         var handedOver = !stopped && await EndAsync(run, status).ConfigureAwait(false);
 
         var finishedAt = core.Now();
         var result = new StoredResult
         {
             Slot = slot,
-            By = core.InstanceId,
+            By = core.Settings.InstanceId,
             Attempt = run.Attempt,
             Status = status,
             StartedAt = DateTimeOffset.FromUnixTimeMilliseconds(startedAt),
@@ -118,7 +118,7 @@ internal sealed class Executor(ISchedulerCore core)
         {
             Job = job.Name,
             Slot = slot,
-            InstanceId = core.InstanceId,
+            InstanceId = core.Settings.InstanceId,
             IsManual = run.Reason == RunReason.Manual,
             Attempt = run.Attempt,
             Reason = run.Reason,
@@ -132,7 +132,7 @@ internal sealed class Executor(ISchedulerCore core)
     {
         try
         {
-            var context = new JobContext(job.Name, slot, core.InstanceId, run.Attempt, run.Reason, run.Token);
+            var context = new JobContext(job.Name, slot, core.Settings.InstanceId, run.Attempt, run.Reason, run.Token);
             // On the thread pool, so a handler that blocks can still time out; the data is resolved
             // inside the run, so a provider that throws or hangs fails or times out the run.
             var work = Task.Run(async () =>
@@ -166,7 +166,7 @@ internal sealed class Executor(ISchedulerCore core)
 
         try
         {
-            await work.WaitAsync(TimeSpan.FromMilliseconds(ms), core.Time).ConfigureAwait(false);
+            await work.WaitAsync(TimeSpan.FromMilliseconds(ms), core.Settings.Time).ConfigureAwait(false);
         }
         catch (TimeoutException) when (!work.IsCompleted)
         {
@@ -182,7 +182,7 @@ internal sealed class Executor(ISchedulerCore core)
         try
         {
             await core.EnsureReadyAsync().ConfigureAwait(false);
-            await core.Backend.SaveResultAsync(job.Name, result, job.HistorySize, job.HistoryTtl, CancellationToken.None).ConfigureAwait(false);
+            await core.Settings.Backend.SaveResultAsync(job.Name, result, job.HistorySize, job.HistoryTtl, CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception error)
         {
@@ -194,7 +194,7 @@ internal sealed class Executor(ISchedulerCore core)
     {
         Job = job.Name,
         Slot = result.Slot,
-        InstanceId = core.InstanceId,
+        InstanceId = core.Settings.InstanceId,
         IsManual = run.Reason == RunReason.Manual,
         Attempt = run.Attempt,
         Reason = run.Reason,

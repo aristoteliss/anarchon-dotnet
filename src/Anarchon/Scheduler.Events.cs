@@ -1,6 +1,5 @@
 // Copyright (C) 2026-present Aristotelis — see repository license.
 
-using Anarchon.Backends;
 using Anarchon.Scheduling;
 
 namespace Anarchon;
@@ -68,17 +67,13 @@ public sealed partial class Scheduler : ISchedulerCore
     /// </example>
     public event EventHandler<SchedulerErrorEvent>? Error;
 
-    long ISchedulerCore.LeaseMs => LeaseMs;
-
-    long ISchedulerCore.HeartbeatMs => HeartbeatMs;
-
-    TimeProvider ISchedulerCore.Time => Time;
+    SchedulerSettings ISchedulerCore.Settings => _settings;
 
     object? ISchedulerCore.SchedulerData => Volatile.Read(ref _data);
 
-    bool ISchedulerCore.IsRunning => _state == State.Running;
+    bool ISchedulerCore.CanStart(Job job) => _state == State.Running && !job.Removed;
 
-    bool ISchedulerCore.IsIdle => _state == State.Idle;
+    bool ISchedulerCore.CanWrite(CancellationToken stop) => _state != State.Idle && stop == Volatile.Read(ref _lifecycle).Token;
 
     CancellationToken ISchedulerCore.StopToken => Volatile.Read(ref _lifecycle).Token;
 
@@ -94,25 +89,25 @@ public sealed partial class Scheduler : ISchedulerCore
 
     void ISchedulerCore.OnStarted(RunStartEvent e)
     {
-        Log.Started(_logger, e.Job, e.ScheduledAt, e.InstanceId, e.Attempt, e.Reason);
+        Log.Started(_settings.Logger, e.Job, e.ScheduledAt, e.InstanceId, e.Attempt, e.Reason);
         Raise(Started, e, nameof(Started));
     }
 
     void ISchedulerCore.OnSucceeded(RunRecord record)
     {
-        Log.Succeeded(_logger, record.Job, record.ScheduledAt, Ms(record.Duration));
+        Log.Succeeded(_settings.Logger, record.Job, record.ScheduledAt, Ms(record.Duration));
         Raise(Succeeded, record, nameof(Succeeded));
     }
 
     void ISchedulerCore.OnFailed(RunFailureEvent e)
     {
-        Log.Failed(_logger, e.Job, e.ScheduledAt, Ms(e.Duration), e.Error, e.Cause);
+        Log.Failed(_settings.Logger, e.Job, e.ScheduledAt, Ms(e.Duration), e.Error, e.Cause);
         Raise(Failed, e, nameof(Failed));
     }
 
     void ISchedulerCore.OnInterrupted(RunInterruptedEvent e)
     {
-        Log.Interrupted(_logger, e.Job, e.ScheduledAt, Ms(e.Duration), e.HandedOver);
+        Log.Interrupted(_settings.Logger, e.Job, e.ScheduledAt, Ms(e.Duration), e.HandedOver);
         Raise(Interrupted, e, nameof(Interrupted));
     }
 
@@ -120,7 +115,7 @@ public sealed partial class Scheduler : ISchedulerCore
 
     void ISchedulerCore.OnLost(LostEvent e)
     {
-        Log.Lost(_logger, e.Job, e.ScheduledAt, e.Attempt);
+        Log.Lost(_settings.Logger, e.Job, e.ScheduledAt, e.Attempt);
         Raise(Lost, e, nameof(Lost));
     }
 
@@ -129,7 +124,7 @@ public sealed partial class Scheduler : ISchedulerCore
         var handlers = Error;
         if (handlers is null)
         {
-            Log.Unhandled(_logger, job is null ? "the scheduler" : $"job \"{job}\"", error.Message, error);
+            Log.Unhandled(_settings.Logger, job is null ? "the scheduler" : $"job \"{job}\"", error.Message, error);
             return;
         }
 
@@ -138,7 +133,7 @@ public sealed partial class Scheduler : ISchedulerCore
 
     private void OnSkipped(SkipEvent e)
     {
-        Log.Skipped(_logger, e.Job, e.ScheduledAt, e.Reason);
+        Log.Skipped(_settings.Logger, e.Job, e.ScheduledAt, e.Reason);
         Raise(Skipped, e, nameof(Skipped));
     }
 
@@ -155,14 +150,10 @@ public sealed partial class Scheduler : ISchedulerCore
             }
             catch (Exception error)
             {
-                Log.HandlerThrew(_logger, name, error);
+                Log.HandlerThrew(_settings.Logger, name, error);
             }
         }
     }
 
     private static double Ms(TimeSpan? duration) => duration?.TotalMilliseconds ?? 0;
-
-    string ISchedulerCore.InstanceId => InstanceId;
-
-    IBackend ISchedulerCore.Backend => Backend;
 }
