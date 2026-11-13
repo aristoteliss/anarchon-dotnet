@@ -90,7 +90,11 @@ internal sealed class NatsLeaseStore(Func<CancellationToken, Task<JetStreamState
     public async Task<Func<ClaimRecord, RunStatus>> PendingStatusAsync(string job, CancellationToken cancellationToken)
     {
         var (runs, _, now) = await LoadAsync(job, cancellationToken).ConfigureAwait(false);
-        return claim => LeaseRules.PendingStatus(runs.Find(claim.Slot), claim.Attempt, now);
+        return claim =>
+        {
+            var run = runs.Find(claim.Slot);
+            return RunHistory.PendingStatus(run?.Status, run?.Attempt == claim.Attempt, run?.LeaseEnd ?? 0, now);
+        };
     }
 
     /// <summary>Forgets the bucket handle: the backend closed the connection it belongs to.</summary>

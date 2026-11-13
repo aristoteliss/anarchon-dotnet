@@ -77,6 +77,36 @@ public static class RunHistory
             .ToList();
     }
 
+    /// <summary>
+    /// The status of an attempt that has no result, for a backend with leases: Running only while it
+    /// is the current attempt of its run and the lease is live. An attempt that a later one replaced,
+    /// or whose lease ran out, is Interrupted; a run that ended without this attempt's result shows
+    /// how it ended.
+    /// </summary>
+    /// <param name="runStatus">The stored status of the run (see <see cref="RunText"/>); null or an unknown text counts as Interrupted.</param>
+    /// <param name="isCurrentAttempt">Whether the run's stored attempt is this attempt. false also when the run is no longer stored.</param>
+    /// <param name="leaseEnd">When the run's lease ends, in Unix milliseconds on the store's clock.</param>
+    /// <param name="now">The store's clock, in Unix milliseconds.</param>
+    /// <returns>The status to show for the attempt.</returns>
+    /// <example>The history of a custom backend with leases
+    /// <code>
+    /// return RunHistory.Build(job, claims, results, limit, claim =&gt;
+    /// {
+    ///     var run = runs.GetValueOrDefault(claim.Slot);
+    ///     return RunHistory.PendingStatus(run?.Status, run?.Attempt == claim.Attempt, run?.LeaseEnd ?? 0, now);
+    /// });
+    /// </code>
+    /// </example>
+    public static RunStatus PendingStatus(string? runStatus, bool isCurrentAttempt, long leaseEnd, long now)
+    {
+        if (!isCurrentAttempt) return RunStatus.Interrupted;
+
+        var status = RunText.ToStatus(runStatus) ?? RunStatus.Interrupted;
+        if (status != RunStatus.Running) return status;
+
+        return leaseEnd >= now ? RunStatus.Running : RunStatus.Interrupted;
+    }
+
     private static RunRecord ToRecord(
         string job,
         ClaimRecord claim,

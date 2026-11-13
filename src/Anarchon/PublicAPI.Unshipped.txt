@@ -1,1 +1,2 @@
 #nullable enable
+static Anarchon.Backends.RunHistory.PendingStatus(string? runStatus, bool isCurrentAttempt, long leaseEnd, long now) -> Anarchon.RunStatus

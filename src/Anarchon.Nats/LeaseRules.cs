@@ -54,14 +54,6 @@ internal static class LeaseRules
         return live ? run.HandedOver() : null;
     }
 
-    /// <summary>An attempt without a result is Running only while it is the current attempt with a live lease.</summary>
-    public static RunStatus PendingStatus(StoredRun? run, int attempt, long now)
-    {
-        if (run is null || run.Attempt != attempt) return RunStatus.Interrupted;
-        if (run.IsRunning) return run.LeaseEnd >= now ? RunStatus.Running : RunStatus.Interrupted;
-        return RunText.ToStatus(run.Status) ?? RunStatus.Interrupted;
-    }
-
     /// <summary>A run nobody claimed yet: refused when too late or overlapping a live run, else attempt 1.</summary>
     private static LeaseStep Start(JobRuns job, RunClaim claim, long now)
     {

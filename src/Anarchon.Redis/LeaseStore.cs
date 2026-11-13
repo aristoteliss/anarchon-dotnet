@@ -176,11 +176,6 @@ internal sealed class LeaseStore(Func<Task<IDatabase>> database, string prefix) 
         }
     }
 
-    /// <summary>An attempt without a result is Running only while it is the current attempt with a live lease.</summary>
-    private static RunStatus PendingStatus(RunStateJson? run, int attempt, long now)
-    {
-        if (run is null || run.Attempt != attempt) return RunStatus.Interrupted;
-        if (run.Status == "running") return run.LeaseEnd >= now ? RunStatus.Running : RunStatus.Interrupted;
-        return RunText.ToStatus(run.Status) ?? RunStatus.Interrupted;
-    }
+    private static RunStatus PendingStatus(RunStateJson? run, int attempt, long now) =>
+        RunHistory.PendingStatus(run?.Status, run?.Attempt == attempt, (long)(run?.LeaseEnd ?? 0), now);
 }
