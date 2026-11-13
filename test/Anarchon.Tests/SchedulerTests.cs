@@ -154,6 +154,56 @@ public sealed class SchedulerTests
     }
 
     [Fact]
+    public async Task a_start_that_fails_while_stop_waits_for_runs_does_not_end_the_stop()
+    {
+        var backend = new MemoryBackend();
+        var scheduler = new Scheduler(new SchedulerOptions { Backend = backend, StopTimeout = TimeSpan.FromMinutes(1) });
+        var entered = new TaskCompletionSource();
+        var stuck = new TaskCompletionSource();
+        scheduler.Cron("slow", "0 8 * * *", async _ =>
+        {
+            entered.TrySetResult();
+            await stuck.Task;
+        });
+        await scheduler.StartAsync();
+        var run = scheduler.RunNowAsync("slow");
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await scheduler.StopAsync(new CancellationToken(canceled: true));
+
+        var connect = new TaskCompletionSource();
+        backend.InitGate = connect.Task;
+        var start = scheduler.StartAsync();
+        using var release = new CancellationTokenSource();
+        var stop = scheduler.StopAsync(release.Token);
+        await UntilStoppingAsync(scheduler);
+        backend.InitFailure = new InvalidOperationException("unreachable");
+        connect.SetResult();
+        await Assert.ThrowsAsync<InvalidOperationException>(() => start);
+        backend.InitGate = null;
+        backend.InitFailure = null;
+
+        var refused = await Assert.ThrowsAsync<AnarchonException>(() => scheduler.StartAsync());
+
+        Assert.Equal(AnarchonErrorCode.State, refused.Code);
+        await release.CancelAsync();
+        await stop;
+        stuck.SetResult();
+        await run;
+    }
+
+    private static async Task UntilStoppingAsync(Scheduler scheduler)
+    {
+        using var limit = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        while (true)
+        {
+            var refused = await Assert.ThrowsAsync<AnarchonException>(() => scheduler.StartAsync());
+            if (refused.Message.Contains("stopping", StringComparison.Ordinal)) return;
+
+            await Task.Delay(TimeSpan.FromMilliseconds(10), limit.Token);
+        }
+    }
+
+    [Fact]
     public async Task a_read_after_stop_opens_the_backend_for_itself_and_closes_it_again()
     {
         var backend = new MemoryBackend();

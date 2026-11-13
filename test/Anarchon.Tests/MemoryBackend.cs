@@ -29,10 +29,14 @@ internal sealed class MemoryBackend(MemoryBackend.Store store) : IBackend
     /// <summary>When set, closing throws it.</summary>
     public Exception? CloseFailure { get; set; }
 
-    public Task InitAsync(CancellationToken cancellationToken)
+    /// <summary>When set, connecting waits for it first, as a slow store does.</summary>
+    public Task? InitGate { get; set; }
+
+    public async Task InitAsync(CancellationToken cancellationToken)
     {
         Inits++;
-        return InitFailure is { } failure ? Task.FromException(failure) : Task.CompletedTask;
+        if (InitGate is { } gate) await gate;
+        if (InitFailure is { } failure) throw failure;
     }
 
     public Task PrepareJobAsync(string job, int historySize, CancellationToken cancellationToken) => Task.CompletedTask;

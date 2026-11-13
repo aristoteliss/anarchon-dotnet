@@ -62,6 +62,18 @@ public sealed class OptionsTests
     }
 
     [Fact]
+    public void a_refused_job_timing_names_the_options_parameter()
+    {
+        var scheduler = new Scheduler(new SchedulerOptions { Backend = new MemoryBackend() });
+
+        var jitter = Assert.Throws<ArgumentOutOfRangeException>(() => scheduler.Every("spread", TimeSpan.FromSeconds(10), Nothing, new() { Jitter = TimeSpan.FromSeconds(5) }));
+        var late = Assert.Throws<ArgumentOutOfRangeException>(() => scheduler.Every("late", TimeSpan.FromMinutes(1), Nothing, new() { Jitter = TimeSpan.FromSeconds(5), MaxLate = TimeSpan.FromSeconds(5) }));
+
+        Assert.Equal("options", jitter.ParamName);
+        Assert.Equal("options", late.ParamName);
+    }
+
+    [Fact]
     public void the_default_jitter_is_lowered_to_a_quarter_of_a_short_interval()
     {
         var scheduler = new Scheduler(new SchedulerOptions { Backend = new MemoryBackend(), Jitter = TimeSpan.FromSeconds(5) });

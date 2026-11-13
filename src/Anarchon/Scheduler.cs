@@ -148,7 +148,12 @@ public sealed partial class Scheduler : IAsyncDisposable, IDisposable
         }
         catch
         {
-            _state = State.Idle;
+            lock (_gate)
+            {
+                // A stop that began meanwhile owns the state until it returns.
+                if (_state == State.Starting) _state = State.Idle;
+            }
+
             await CloseBackendAsync().ConfigureAwait(false);
             throw;
         }
