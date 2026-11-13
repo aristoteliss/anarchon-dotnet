@@ -4,6 +4,34 @@ Versions follow the Node.js package in their first two numbers: Anarchon for .NE
 algorithm and the stored data of `anarchon` 0.6.x, so their instances can share jobs. The last number
 belongs to each package.
 
+## Unreleased
+
+### Added
+
+- **`Anarchon`**: `RunHistory.PendingStatus()`, the status of an attempt without a result on a
+  backend with leases: Running only for the current attempt with a live lease. The Redis, SQL and
+  NATS backends use it; a backend of your own can pass it to `RunHistory.Build()`.
+
+### Fixed
+
+- **`Anarchon`**: a start that fails while a stop waits for runs no longer sets the scheduler to
+  idle. A later `StartAsync()` is refused with `AnarchonErrorCode.State` until the stop returns;
+  before, it started the scheduler and the stop then stopped it without an error.
+- **`Anarchon`**: a refused `Jitter` or `MaxLate` of a job names the parameter `options` in its
+  `ArgumentOutOfRangeException` (was the internal name `input`).
+- **`Anarchon.Nats`**: a `Prefix` that is not empty and does not end with a dot is refused with an
+  `ArgumentException` when the backend is made. Before, start passed and every claim failed with
+  no reply from the server. The Node.js package does not make this check.
+
+### Changed
+
+- **`Anarchon`**: `Cron()`, `Every()` and `At()` check the job's name and settings before they check
+  that the name is free, so a bad value in a call with a taken name gives an `ArgumentException`,
+  not `AnarchonErrorCode.JobExists`.
+- **`Anarchon.Sql`**: a claim refused as an overlap writes nothing and reports the earliest live
+  run. Before, it could end older dead runs first, in the order the database returned the rows;
+  those runs now end at the next claim that starts a run.
+
 ## 0.6.2 (2026-11-10)
 
 ### Changed

@@ -14,9 +14,12 @@ internal sealed class MemoryBackend(MemoryBackend.Store store) : IBackend
 
     public string Name => "memory";
 
-    public TimeSpan DedupeWindow => TimeSpan.MaxValue;
+    public TimeSpan DedupeWindow { get; init; } = TimeSpan.MaxValue;
 
     public int Inits { get; private set; }
+
+    /// <summary>The settings of each job the scheduler asked this backend to check, in order.</summary>
+    public List<JobLimits> Limits { get; } = [];
 
     public int Closes { get; private set; }
 
@@ -38,6 +41,8 @@ internal sealed class MemoryBackend(MemoryBackend.Store store) : IBackend
         if (InitGate is { } gate) await gate;
         if (InitFailure is { } failure) throw failure;
     }
+
+    public void CheckJob(JobLimits job) => Limits.Add(job);
 
     public Task PrepareJobAsync(string job, int historySize, CancellationToken cancellationToken) => Task.CompletedTask;
 

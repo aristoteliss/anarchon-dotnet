@@ -217,7 +217,7 @@ A SQLite file only coordinates the processes that open that same file: one machi
 
 ### NATS
 
-`NatsBackendOptions` takes a NATS URL (or several, comma-separated) as `ConnectionString` (default `nats://localhost:4222`; the backend opens the connection and closes it on stop) or a `Connection` your app already has (`INatsConnection`, never closed by Anarchon), the `Strategy` (`MsgId` by default, or `Lease`), a `Stream` (default `CRON`, created on start), a `Prefix` for subjects (default `cron.`), a `DuplicateWindow` (default 5 minutes), a `HistorySize` and `Replicas`.
+`NatsBackendOptions` takes a NATS URL (or several, comma-separated) as `ConnectionString` (default `nats://localhost:4222`; the backend opens the connection and closes it on stop) or a `Connection` your app already has (`INatsConnection`, never closed by Anarchon), the `Strategy` (`MsgId` by default, or `Lease`), a `Stream` (default `CRON`, created on start), a `Prefix` for subjects (default `cron.`; it ends with a dot), a `DuplicateWindow` (default 5 minutes), a `HistorySize` and `Replicas`.
 
 - **History.** Claims and results go to `<prefix><job>.claims` and `<prefix><job>.results` in the stream, which keeps the largest `HistorySize` of the backend and its jobs, per subject. `HistoryTtl` is refused with `Unsupported`.
 - **`MsgId`.** JetStream remembers a claimed run for `DuplicateWindow`, so a job's `Jitter` plus `MaxLate` must be shorter (`UnsafeJob` otherwise).
