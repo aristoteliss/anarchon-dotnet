@@ -15,7 +15,7 @@
     <PackageVersion Include="NATS.Client.KeyValueStore" Version="3.3.2" />
     <PackageVersion Include="Npgsql" Version="10.0.3" />
     <PackageVersion Include="RabbitMQ.Client" Version="7.2.2" />
-    <PackageVersion Include="StackExchange.Redis" Version="3.4.31" />
+    <PackageVersion Include="StackExchange.Redis" Version="3.4.35" />
     <!-- Microsoft.Data.SqlClient 7.1.1 brings 9.0.18, which has known vulnerabilities (CVE-2026-70162, CVE-2026-84008). -->
     <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="$(MicrosoftExtensionsVersion)" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(MicrosoftExtensionsVersion)" />
