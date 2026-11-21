@@ -8,6 +8,15 @@ namespace Anarchon.Redis;
 /// <summary>One way to decide who runs each run, without leases. Three are chosen between by <see cref="RedisBackendOptions.Strategy"/>.</summary>
 internal interface IClaimStrategy
 {
+    /// <summary>How long the server remembers a claimed run; <see cref="TimeSpan.MaxValue"/> when it never forgets one.</summary>
+    TimeSpan DedupeWindow { get; }
+
+    /// <summary>
+    /// Refuses a job whose late claims could outlive what the server remembers: a run must still be
+    /// known while late instances may try to claim it.
+    /// </summary>
+    void CheckJob(JobLimits job);
+
     /// <summary>Checks once that the server supports this strategy.</summary>
     Task InitAsync(IDatabase db);
 
@@ -25,6 +34,12 @@ internal interface IClaimStrategy
 /// </summary>
 internal sealed class StreamIdStrategy : IClaimStrategy
 {
+    public TimeSpan DedupeWindow => TimeSpan.MaxValue;
+
+    public void CheckJob(JobLimits job)
+    {
+    }
+
     public Task InitAsync(IDatabase db) => Task.CompletedTask;
 
     public Task PrepareStreamAsync(IDatabase db, RedisKey stream) => Task.CompletedTask;
@@ -55,6 +70,16 @@ internal sealed class StreamIdStrategy : IClaimStrategy
 internal sealed class IdmpStrategy(long durationSec, int maxSize) : IClaimStrategy
 {
     private static readonly Version Required = new(8, 6);
+
+    public TimeSpan DedupeWindow => TimeSpan.FromSeconds(durationSec);
+
+    public void CheckJob(JobLimits job)
+    {
+        var (neededMs, minGapMs) = Claims.Timing(job);
+        if (Claims.Covers(maxSize, minGapMs) > neededMs) return;
+
+        throw Claims.Unsafe(job, $"IdmpMaxSize ({maxSize}) runs × {minGapMs} ms between runs must cover Jitter + MaxLate ({neededMs} ms)");
+    }
 
     public async Task InitAsync(IDatabase db)
     {
@@ -135,6 +160,21 @@ internal sealed class ScriptStrategy(long windowMs) : IClaimStrategy
         """;
 
     /// <summary>Runs the script once, which also checks that the server runs scripts at all.</summary>
+    public TimeSpan DedupeWindow => TimeSpan.FromMilliseconds(windowMs);
+
+    public void CheckJob(JobLimits job)
+    {
+        if (job.HistoryTtl is { } ttl && ttl.TotalMilliseconds <= windowMs)
+        {
+            throw Claims.Unsafe(job, $"HistoryTtl must be longer than the Script strategy's window ({windowMs} ms)");
+        }
+
+        var (neededMs, minGapMs) = Claims.Timing(job);
+        if (Claims.Covers(job.HistorySize, minGapMs) > neededMs) return;
+
+        throw Claims.Unsafe(job, $"HistorySize ({job.HistorySize}) runs × {minGapMs} ms between runs must cover Jitter + MaxLate ({neededMs} ms) for the Script strategy");
+    }
+
     public async Task InitAsync(IDatabase db) => await db.ScriptEvaluateAsync("return 1").ConfigureAwait(false);
 
     public Task PrepareStreamAsync(IDatabase db, RedisKey stream) => Task.CompletedTask;
@@ -161,4 +201,17 @@ internal static class Claims
         var token = entries[0]["token"];
         return token.IsNull ? null : token.ToString();
     }
+
+    /// <summary>How late a claim of the job can be, and the shortest time between two of its runs, in milliseconds.</summary>
+    public static (long NeededMs, long MinGapMs) Timing(JobLimits job)
+    {
+        var neededMs = (long)(job.Jitter + job.MaxLate).TotalMilliseconds;
+        var minGapMs = job.MinGap == TimeSpan.MaxValue ? long.MaxValue : (long)job.MinGap.TotalMilliseconds;
+        return (neededMs, minGapMs);
+    }
+
+    /// <summary>The time that <paramref name="runs"/> remembered runs span, one per gap, without overflow.</summary>
+    public static long Covers(long runs, long gapMs) => gapMs > long.MaxValue / Math.Max(runs, 1) ? long.MaxValue : runs * gapMs;
+
+    public static AnarchonException Unsafe(JobLimits job, string reason) => new(AnarchonErrorCode.UnsafeJob, $"Job \"{job.Name}\": {reason}");
 }

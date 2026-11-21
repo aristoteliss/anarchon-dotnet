@@ -95,7 +95,7 @@ internal sealed partial class DeclaredJob
     private (Scheduling.Schedule, JobOptions) ToEvery(EveryAttribute every, RegisterOptions register)
     {
         var interval = (long)Duration.Parse(every.Interval).TotalMilliseconds;
-        if (interval < 1_000) throw new ArgumentException($"the interval must be at least 1s (got {interval} ms)");
+        if (interval < EverySchedule.MinIntervalMs) throw new ArgumentException($"the interval must be at least 1s (got {interval} ms)");
 
         var offset = every.Offset is { } text ? (long)Duration.Parse(text).TotalMilliseconds : 0;
         var options = Fill(new EveryJobOptions(), register.Defaults);

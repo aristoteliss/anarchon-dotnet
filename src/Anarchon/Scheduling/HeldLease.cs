@@ -38,10 +38,10 @@ internal sealed class HeldLease
         _onLost = onLost;
         _confirmedAt = leased.ClaimedAt;
 
-        var heartbeat = TimeSpan.FromMilliseconds(core.HeartbeatMs);
+        var heartbeat = TimeSpan.FromMilliseconds(core.Settings.HeartbeatMs);
         lock (_gate)
         {
-            _heartbeat = core.Time.CreateTimer(_ => Renew(), null, heartbeat, heartbeat);
+            _heartbeat = core.Settings.Time.CreateTimer(_ => Renew(), null, heartbeat, heartbeat);
             ArmDeadline();
         }
     }
@@ -71,17 +71,20 @@ internal sealed class HeldLease
     /// <summary>Stores how the run ended.</summary>
     public async Task FinishAsync(RunStatus status)
     {
-        var (job, slot, token, _, _, _, _, stop) = _leased;
+        var job = _leased.Job;
+        var slot = _leased.Slot;
+        var token = _leased.Token;
+        var stop = _leased.Stop;
         lock (_gate)
         {
             _ending = true;
             // Keep renewing while the end is stored, also while stop waits: if the store is briefly
             // unreachable, a backup must not run a job that already completed again. But for one
             // lease at most: a finish the store never answers must not hold the job's lease for good.
-            if (!_stopped) _giveUp = _core.Time.CreateTimer(_ => _heartbeat.Dispose(), null, TimeSpan.FromMilliseconds(_core.LeaseMs), Timeout.InfiniteTimeSpan);
+            if (!_stopped) _giveUp = _core.Settings.Time.CreateTimer(_ => _heartbeat.Dispose(), null, TimeSpan.FromMilliseconds(_core.Settings.LeaseMs), Timeout.InfiniteTimeSpan);
         }
 
-        for (var delayMs = FirstFinishRetryMs; !IsLost() && !_core.IsIdle && stop == _core.StopToken; delayMs = Math.Min(delayMs * 2, _core.HeartbeatMs))
+        for (var delayMs = FirstFinishRetryMs; !IsLost() && _core.CanWrite(stop); delayMs = Math.Min(delayMs * 2, _core.Settings.HeartbeatMs))
         {
             try
             {
@@ -92,7 +95,7 @@ internal sealed class HeldLease
             catch (Exception error)
             {
                 _core.OnError(error, job.Name, slot);
-                await Task.Delay(TimeSpan.FromMilliseconds(delayMs), _core.Time).ConfigureAwait(false);
+                await Task.Delay(TimeSpan.FromMilliseconds(delayMs), _core.Settings.Time).ConfigureAwait(false);
             }
         }
 
@@ -102,7 +105,9 @@ internal sealed class HeldLease
     /// <summary>Hands the run to a backup now. true if the store released it.</summary>
     public async Task<bool> ReleaseAsync()
     {
-        var (job, slot, token, _, _, _, _, _) = _leased;
+        var job = _leased.Job;
+        var slot = _leased.Slot;
+        var token = _leased.Token;
         lock (_gate)
         {
             _ending = true;
@@ -126,11 +131,13 @@ internal sealed class HeldLease
 
     private async Task RenewAsync(long sentAt)
     {
-        var (job, slot, token, _, _, _, _, _) = _leased;
+        var job = _leased.Job;
+        var slot = _leased.Slot;
+        var token = _leased.Token;
 
         try
         {
-            var renewed = await _runs.HeartbeatAsync(job.Name, slot, token, TimeSpan.FromMilliseconds(_core.LeaseMs), CancellationToken.None).ConfigureAwait(false);
+            var renewed = await _runs.HeartbeatAsync(job.Name, slot, token, TimeSpan.FromMilliseconds(_core.Settings.LeaseMs), CancellationToken.None).ConfigureAwait(false);
             if (renewed) Confirm(sentAt);
             // Once finish or release is sent, a refused heartbeat is expected: both check the token themselves.
             else if (!IsEnding) MarkLost();
@@ -157,9 +164,9 @@ internal sealed class HeldLease
     {
         if (_stopped) return;
 
-        var remainingMs = Math.Max(0, _confirmedAt + _core.LeaseMs - _core.Now());
+        var remainingMs = Math.Max(0, _confirmedAt + _core.Settings.LeaseMs - _core.Now());
         var due = TimeSpan.FromMilliseconds(remainingMs);
-        if (_deadline is null) _deadline = _core.Time.CreateTimer(_ => OnDeadline(), null, due, Timeout.InfiniteTimeSpan);
+        if (_deadline is null) _deadline = _core.Settings.Time.CreateTimer(_ => OnDeadline(), null, due, Timeout.InfiniteTimeSpan);
         else _deadline.Change(due, Timeout.InfiniteTimeSpan);
     }
 

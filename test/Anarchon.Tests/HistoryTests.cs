@@ -59,4 +59,19 @@ public sealed class HistoryTests
         Duration = TimeSpan.FromMilliseconds(5),
         Error = error,
     };
+
+    [Fact]
+    public void an_attempt_without_a_result_is_running_only_as_the_current_attempt_with_a_live_lease()
+    {
+        const long Now = 10_000;
+
+        Assert.Equal(RunStatus.Running, RunHistory.PendingStatus("running", isCurrentAttempt: true, leaseEnd: Now, Now));
+        Assert.Equal(RunStatus.Interrupted, RunHistory.PendingStatus("running", isCurrentAttempt: true, leaseEnd: Now - 1, Now));
+        Assert.Equal(RunStatus.Interrupted, RunHistory.PendingStatus("running", isCurrentAttempt: false, leaseEnd: Now + 5_000, Now));
+        Assert.Equal(RunStatus.Success, RunHistory.PendingStatus("success", isCurrentAttempt: true, leaseEnd: 0, Now));
+        Assert.Equal(RunStatus.Failed, RunHistory.PendingStatus("failed", isCurrentAttempt: true, leaseEnd: 0, Now));
+        Assert.Equal(RunStatus.Interrupted, RunHistory.PendingStatus("interrupted", isCurrentAttempt: true, leaseEnd: 0, Now));
+        Assert.Equal(RunStatus.Interrupted, RunHistory.PendingStatus(null, isCurrentAttempt: true, leaseEnd: Now, Now));
+        Assert.Equal(RunStatus.Interrupted, RunHistory.PendingStatus("later-status", isCurrentAttempt: true, leaseEnd: Now, Now));
+    }
 }

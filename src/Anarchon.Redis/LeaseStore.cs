@@ -25,6 +25,13 @@ internal sealed class LeaseStore(Func<Task<IDatabase>> database, string prefix) 
 
     private const int MaxOrderedAttempts = 99;
 
+    /// <summary>
+    /// How many results stay for each run of HistorySize. A result belongs to one attempt, and the
+    /// stream of attempts is trimmed with <c>MAXLEN ~</c>, which can leave more entries than
+    /// HistorySize: twice as many results stay, so those entries keep theirs.
+    /// </summary>
+    private const int ResultsPerRun = 2;
+
     public async Task<ClaimOutcome> ClaimAsync(RunClaim claim, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(claim);
@@ -77,7 +84,9 @@ internal sealed class LeaseStore(Func<Task<IDatabase>> database, string prefix) 
         var score = ended + (Math.Min(result.Attempt, MaxOrderedAttempts) / AttemptsPerMs);
         await db.SortedSetAddAsync(key, StoredData.ToJson(result), score).ConfigureAwait(false);
 
-        await db.SortedSetRemoveRangeByRankAsync(key, 0, -((historySize * 2L) + 1)).ConfigureAwait(false);
+        // Ranks count from the oldest result: all before the newest `kept` go.
+        var kept = (long)historySize * ResultsPerRun;
+        await db.SortedSetRemoveRangeByRankAsync(key, 0, -(kept + 1)).ConfigureAwait(false);
         if (historyTtl is { } ttl)
         {
             var oldest = result.FinishedAt.ToUnixTimeMilliseconds() - (long)ttl.TotalMilliseconds;
@@ -176,11 +185,6 @@ internal sealed class LeaseStore(Func<Task<IDatabase>> database, string prefix) 
         }
     }
 
-    /// <summary>An attempt without a result is Running only while it is the current attempt with a live lease.</summary>
-    private static RunStatus PendingStatus(RunStateJson? run, int attempt, long now)
-    {
-        if (run is null || run.Attempt != attempt) return RunStatus.Interrupted;
-        if (run.Status == "running") return run.LeaseEnd >= now ? RunStatus.Running : RunStatus.Interrupted;
-        return RunText.ToStatus(run.Status) ?? RunStatus.Interrupted;
-    }
+    private static RunStatus PendingStatus(RunStateJson? run, int attempt, long now) =>
+        RunHistory.PendingStatus(run?.Status, run?.Attempt == attempt, (long)(run?.LeaseEnd ?? 0), now);
 }

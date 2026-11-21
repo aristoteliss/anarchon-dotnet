@@ -32,7 +32,7 @@ internal abstract record ClaimStep
     /// <summary>Decides a claim from the run's row (null when nobody claimed it) and the database's clock.</summary>
     public static ClaimStep Decide(RunRow? run, RunClaim claim, long now)
     {
-        if (run is null) return claim.Mode == ClaimMode.Takeover ? new Answer(new ClaimOutcome.None()) : new Start();
+        if (run is null) return DecideUnclaimed(claim, now);
 
         var running = run.Status == "running";
         // Our own claim, sent again.
@@ -43,5 +43,16 @@ internal abstract record ClaimStep
         // Hand-overs on stop don't count against the run's attempts.
         var used = run.Attempt - run.Released;
         return used >= run.MaxAttempts ? new GiveUp() : new TakeOver(run.Attempt + 1);
+    }
+
+    private static ClaimStep DecideUnclaimed(RunClaim claim, long now)
+    {
+        if (claim.Mode == ClaimMode.Takeover) return new Answer(new ClaimOutcome.None());
+
+        // A claim delayed or queued during an outage must not start a stale run.
+        var lateMs = now - claim.Slot;
+        var maxLateMs = (long)(claim.MaxLate?.TotalMilliseconds ?? 0);
+        var late = maxLateMs > 0 && lateMs > maxLateMs;
+        return late ? new Answer(new ClaimOutcome.Late(TimeSpan.FromMilliseconds(lateMs))) : new Start();
     }
 }

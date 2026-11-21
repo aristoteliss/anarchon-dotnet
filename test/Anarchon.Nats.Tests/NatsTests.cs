@@ -25,6 +25,8 @@ public sealed class NatsTests
         Assert.Throws<ArgumentOutOfRangeException>(() => new NatsBackend(new NatsBackendOptions { DuplicateWindow = TimeSpan.Zero }));
         Assert.Throws<ArgumentOutOfRangeException>(() => new NatsBackend(new NatsBackendOptions { HistorySize = 0 }));
         Assert.Throws<ArgumentOutOfRangeException>(() => new NatsBackend(new NatsBackendOptions { Replicas = 0 }));
+        var prefix = Assert.Throws<ArgumentException>(() => new NatsBackend(new NatsBackendOptions { Prefix = "billing.cron" }));
+        Assert.Contains("Prefix \"billing.cron\" must end with \".\"", prefix.Message, StringComparison.Ordinal);
 
         var msgId = new NatsBackend(new NatsBackendOptions { DuplicateWindow = TimeSpan.FromMinutes(10) });
         var lease = new NatsBackend(new NatsBackendOptions { Strategy = NatsStrategy.Lease });

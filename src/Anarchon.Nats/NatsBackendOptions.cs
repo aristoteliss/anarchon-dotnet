@@ -67,7 +67,7 @@ public sealed class NatsBackendOptions
     /// </summary>
     public string Stream { get; set; } = "CRON";
 
-    /// <summary>Subject prefix: subjects are <c>&lt;prefix&gt;&lt;job&gt;.claims</c> and <c>&lt;prefix&gt;&lt;job&gt;.results</c>. Default <c>cron.</c>.</summary>
+    /// <summary>Subject prefix: subjects are <c>&lt;prefix&gt;&lt;job&gt;.claims</c> and <c>&lt;prefix&gt;&lt;job&gt;.results</c>. Default <c>cron.</c>. A prefix that is not empty must end with a dot.</summary>
     public string Prefix { get; set; } = "cron.";
 
     /// <summary>

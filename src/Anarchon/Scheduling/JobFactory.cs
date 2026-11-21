@@ -112,18 +112,9 @@ internal static class JobFactory
     /// <summary>Reads the jitter and the lateness limit, and refuses timings the schedule or the backend can't keep.</summary>
     private static (long JitterMs, long MaxLateMs) ReadTiming(JobInput input)
     {
-        var (name, _, _, options, defaults, backend) = input;
-        var jitterMs = ReadJitter(input);
-
-        var maxLateMs = options.MaxLate is { } maxLate
-            ? Settings.PositiveMs($"Job \"{name}\": MaxLate", maxLate)
-            : Math.Max(defaults.MaxLateMs, jitterMs + 1_000);
-        if (maxLateMs <= jitterMs)
-        {
-            throw new ArgumentOutOfRangeException(
-                nameof(input),
-                $"Job \"{name}\": MaxLate ({maxLateMs} ms) must be bigger than Jitter ({jitterMs} ms)");
-        }
+        var (name, schedule, _, options, defaults, backend) = input;
+        var jitterMs = ReadJitter(name, schedule, options, defaults);
+        var maxLateMs = ReadMaxLate(name, options, defaults, jitterMs);
 
         var windowMs = backend.DedupeWindow == TimeSpan.MaxValue ? long.MaxValue : (long)backend.DedupeWindow.TotalMilliseconds;
         if (jitterMs + maxLateMs >= windowMs)
@@ -138,9 +129,8 @@ internal static class JobFactory
     }
 
     /// <summary>Reads the jitter, by default capped at a quarter of the time between runs; refuses half or more.</summary>
-    private static long ReadJitter(JobInput input)
+    private static long ReadJitter(string name, Schedule schedule, JobOptions options, SchedulerDefaults defaults)
     {
-        var (name, schedule, _, options, defaults, _) = input;
         var jitterMs = options.Jitter is { } jitter
             ? Settings.NonNegativeMs($"Job \"{name}\": Jitter", jitter)
             : Math.Min(defaults.JitterMs, schedule.MinGapMs / 4);
@@ -148,10 +138,27 @@ internal static class JobFactory
         if (jitterMs * 2 >= schedule.MinGapMs)
         {
             throw new ArgumentOutOfRangeException(
-                nameof(input),
+                nameof(options),
                 $"Job \"{name}\": Jitter ({jitterMs} ms) must be under half the time between runs ({schedule.MinGapMs} ms)");
         }
 
         return jitterMs;
+    }
+
+    /// <summary>Reads the lateness limit, by default at least a second more than the jitter; refuses one the jitter can reach.</summary>
+    private static long ReadMaxLate(string name, JobOptions options, SchedulerDefaults defaults, long jitterMs)
+    {
+        var maxLateMs = options.MaxLate is { } maxLate
+            ? Settings.PositiveMs($"Job \"{name}\": MaxLate", maxLate)
+            : Math.Max(defaults.MaxLateMs, jitterMs + 1_000);
+
+        if (maxLateMs <= jitterMs)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(options),
+                $"Job \"{name}\": MaxLate ({maxLateMs} ms) must be bigger than Jitter ({jitterMs} ms)");
+        }
+
+        return maxLateMs;
     }
 }

@@ -48,7 +48,7 @@ internal sealed class LeaseRunner(ISchedulerCore core, Executor executor, IRunSt
             var active = await runs.ActiveAsync(job.Name, CancellationToken.None).ConfigureAwait(false);
             foreach (var run in active)
             {
-                if (stop.IsCancellationRequested || !core.IsRunning || job.Removed) return;
+                if (stop.IsCancellationRequested || !core.CanStart(job)) return;
                 if (run.IsAlive) Watch(job, run.Slot);
                 // A dead run is retried only while it is the job's latest run; an older one is
                 // superseded (it is marked interrupted when the next run starts).
@@ -73,7 +73,7 @@ internal sealed class LeaseRunner(ISchedulerCore core, Executor executor, IRunSt
         if (previous is not { } slot || now - slot > job.CatchUpMs) return;
 
         await Delay(job.RandomJitterMs(), stop).ConfigureAwait(false);
-        if (!stop.IsCancellationRequested && core.IsRunning && !job.Removed)
+        if (!stop.IsCancellationRequested && core.CanStart(job))
         {
             await RunAsync(job, slot, RunReason.CatchUp, stop).ConfigureAwait(false);
         }
@@ -83,14 +83,14 @@ internal sealed class LeaseRunner(ISchedulerCore core, Executor executor, IRunSt
     public async Task RunAsync(Job job, long slot, RunReason reason, CancellationToken stop)
     {
         if (reason == RunReason.Scheduled) await YieldIfFailedAsync(job, slot, stop).ConfigureAwait(false);
-        var input = Claims.Input(core.InstanceId, job, slot);
+        var claim = ToClaim(job, slot, Guid.NewGuid().ToString(), reason);
         var claimedAt = core.Now();
-        var outcome = await ClaimAsync(job, input, reason, stop).ConfigureAwait(false);
+        var outcome = await ClaimAsync(job, claim, stop).ConfigureAwait(false);
         if (outcome is null) return;
 
         if (stop.IsCancellationRequested)
         {
-            if (outcome is ClaimOutcome.Won && !core.IsIdle && stop == core.StopToken) await ReleaseQuietlyAsync(input).ConfigureAwait(false);
+            if (outcome is ClaimOutcome.Won && core.CanWrite(stop)) await ReleaseQuietlyAsync(claim).ConfigureAwait(false);
             return;
         }
 
@@ -102,7 +102,7 @@ internal sealed class LeaseRunner(ISchedulerCore core, Executor executor, IRunSt
 
         Unwatch(job, slot);
         var startedAs = won.Attempt > 1 ? RunReason.Takeover : reason;
-        await ExecuteLeasedAsync(new LeasedRun(job, slot, input.Token, claimedAt, won.Attempt, startedAs, null, stop)).ConfigureAwait(false);
+        await ExecuteLeasedAsync(new LeasedRun(job, slot, claim.Token, claimedAt, won.Attempt, startedAs, null, stop)).ConfigureAwait(false);
     }
 
     /// <summary>RunNowAsync(): a run of its own, never retried by a backup and allowed to overlap.</summary>
@@ -166,7 +166,7 @@ internal sealed class LeaseRunner(ISchedulerCore core, Executor executor, IRunSt
 
         // Healthy instances claim by slot + jitter; the wait ends a heartbeat later, capped at MaxLate
         // so the claim is never refused as late.
-        var end = slot + Math.Min(job.JitterMs + core.HeartbeatMs, job.MaxLateMs);
+        var end = slot + Math.Min(job.JitterMs + core.Settings.HeartbeatMs, job.MaxLateMs);
         return Delay(end - core.Now(), stop);
     }
 
@@ -174,65 +174,54 @@ internal sealed class LeaseRunner(ISchedulerCore core, Executor executor, IRunSt
     /// Sends the claim. null when the scheduler stopped first, or when the claim failed: the failure is
     /// reported as an Error event, and a failed takeover is tried again later.
     /// </summary>
-    private async Task<ClaimOutcome?> ClaimAsync(Job job, ClaimInput input, RunReason reason, CancellationToken stop)
+    private async Task<ClaimOutcome?> ClaimAsync(Job job, RunClaim claim, CancellationToken stop)
     {
-        var lateMs = reason == RunReason.CatchUp ? job.CatchUpMs + job.JitterMs : job.MaxLateMs;
-
         try
         {
             await core.EnsureReadyAsync().ConfigureAwait(false);
             if (stop.IsCancellationRequested) return null;
 
-            var claim = new RunClaim
-            {
-                Job = input.Job,
-                Slot = input.Slot,
-                Token = input.Token,
-                InstanceId = input.InstanceId,
-                HistorySize = input.HistorySize,
-                HistoryTtl = input.HistoryTtl,
-                Mode = reason == RunReason.Takeover ? ClaimMode.Takeover : ClaimMode.New,
-                Reason = reason,
-                Lease = TimeSpan.FromMilliseconds(core.LeaseMs),
-                Overlap = job.Overlap,
-                MaxAttempts = job.MaxAttempts,
-                // Checked again on the store's clock, in case this claim was delayed on its way.
-                MaxLate = TimeSpan.FromMilliseconds(lateMs + JobFactory.ClockToleranceMs),
-                Keep = TimeSpan.FromMilliseconds(job.KeepMs),
-            };
             return await runs.ClaimAsync(claim, CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception error)
         {
             if (stop.IsCancellationRequested) return null;
 
-            core.OnError(error, job.Name, input.Slot);
-            if (reason == RunReason.Takeover) Watch(job, input.Slot); // try again later
+            core.OnError(error, job.Name, claim.Slot);
+            if (claim.Reason == RunReason.Takeover) Watch(job, claim.Slot); // try again later
             return null;
         }
     }
 
-    /// <summary>Claims one slot for RunNowAsync(): a new run with its own token, allowed to overlap, never retried.</summary>
+    /// <summary>Claims one slot for RunNowAsync(): a new run with its own token, allowed to overlap, never retried or refused as late.</summary>
     private Task<ClaimOutcome> ClaimManualAsync(Job job, long slot, string token)
     {
-        var input = Claims.Input(core.InstanceId, job, slot);
-        var claim = new RunClaim
+        var claim = ToClaim(job, slot, token, RunReason.Manual) with { Overlap = OverlapPolicy.Allow, MaxAttempts = 1, MaxLate = null };
+        return runs.ClaimAsync(claim, CancellationToken.None);
+    }
+
+    /// <summary>The claim of one run of the job for this instance, with the job's own limits.</summary>
+    private RunClaim ToClaim(Job job, long slot, string token, RunReason reason)
+    {
+        var lateMs = reason == RunReason.CatchUp ? job.CatchUpMs + job.JitterMs : job.MaxLateMs;
+
+        return new RunClaim
         {
-            Job = input.Job,
+            Job = job.Name,
             Slot = slot,
             Token = token,
-            InstanceId = input.InstanceId,
-            HistorySize = input.HistorySize,
-            HistoryTtl = input.HistoryTtl,
-            Mode = ClaimMode.New,
-            Reason = RunReason.Manual,
-            Lease = TimeSpan.FromMilliseconds(core.LeaseMs),
-            Overlap = OverlapPolicy.Allow,
-            MaxAttempts = 1,
+            InstanceId = core.Settings.InstanceId,
+            HistorySize = job.HistorySize,
+            HistoryTtl = job.HistoryTtl,
+            Mode = reason == RunReason.Takeover ? ClaimMode.Takeover : ClaimMode.New,
+            Reason = reason,
+            Lease = TimeSpan.FromMilliseconds(core.Settings.LeaseMs),
+            Overlap = job.Overlap,
+            MaxAttempts = job.MaxAttempts,
+            // Checked again on the store's clock, in case this claim was delayed on its way.
+            MaxLate = TimeSpan.FromMilliseconds(lateMs + JobFactory.ClockToleranceMs),
             Keep = TimeSpan.FromMilliseconds(job.KeepMs),
         };
-
-        return runs.ClaimAsync(claim, CancellationToken.None);
     }
 
     /// <summary>Reports a claim this instance lost as a skip, and backs up the run that someone else holds.</summary>
@@ -242,7 +231,7 @@ internal sealed class LeaseRunner(ISchedulerCore core, Executor executor, IRunSt
         var quiet = reason is RunReason.Takeover or RunReason.CatchUp;
         void Skip(SkipReason why, TimeSpan? late = null)
         {
-            if (!quiet) core.OnSkipped(new SkipEvent { Job = job.Name, Slot = slot, InstanceId = core.InstanceId, Reason = why, Late = late });
+            if (!quiet) core.OnSkipped(new SkipEvent { Job = job.Name, Slot = slot, InstanceId = core.Settings.InstanceId, Reason = why, Late = late });
         }
 
         switch (outcome)
@@ -279,12 +268,12 @@ internal sealed class LeaseRunner(ISchedulerCore core, Executor executor, IRunSt
         lock (_gate)
         {
             var watched = _watchers.ContainsKey(key) || _localRuns.ContainsKey(key);
-            if (watched || !core.IsRunning || job.Removed) return;
+            if (watched || !core.CanStart(job)) return;
 
             // At a random moment, so backups don't all try at once.
-            var delayMs = core.HeartbeatMs + Random.Shared.NextInt64(core.HeartbeatMs);
+            var delayMs = core.Settings.HeartbeatMs + Random.Shared.NextInt64(core.Settings.HeartbeatMs);
             var watch = new Backup();
-            watch.Timer = core.Time.CreateTimer(_ => Wake(job, slot, watch), null, TimeSpan.FromMilliseconds(delayMs), Timeout.InfiniteTimeSpan);
+            watch.Timer = core.Settings.Time.CreateTimer(_ => Wake(job, slot, watch), null, TimeSpan.FromMilliseconds(delayMs), Timeout.InfiniteTimeSpan);
             _watchers[key] = watch;
         }
     }
@@ -299,7 +288,7 @@ internal sealed class LeaseRunner(ISchedulerCore core, Executor executor, IRunSt
             watch.Timer?.Dispose();
         }
 
-        if (core.IsRunning && !job.Removed) _ = core.Track(RunAsync(job, slot, RunReason.Takeover, core.StopToken));
+        if (core.CanStart(job)) _ = core.Track(RunAsync(job, slot, RunReason.Takeover, core.StopToken));
     }
 
     private void Unwatch(Job job, long slot)
@@ -314,8 +303,10 @@ internal sealed class LeaseRunner(ISchedulerCore core, Executor executor, IRunSt
     /// <summary>Runs a job this instance claimed, renewing its lease until it ends.</summary>
     private async Task<RunRecord> ExecuteLeasedAsync(LeasedRun leased)
     {
-        var (job, slot, _, _, attempt, reason, data, stop) = leased;
-        var run = new Execution(attempt, reason, stop) { Data = data };
+        var job = leased.Job;
+        var slot = leased.Slot;
+        var reason = leased.Reason;
+        var run = new Execution(leased.Attempt, reason, leased.Stop) { Data = leased.Data };
         var lease = new HeldLease(core, runs, leased, () => LoseRun(run, leased));
         run.Finish = lease.FinishAsync;
         run.Release = lease.ReleaseAsync;
@@ -344,15 +335,15 @@ internal sealed class LeaseRunner(ISchedulerCore core, Executor executor, IRunSt
     private void LoseRun(Execution run, LeasedRun leased)
     {
         run.Abort(AbortCause.Lost);
-        core.OnLost(new LostEvent { Job = leased.Job.Name, Slot = leased.Slot, InstanceId = core.InstanceId, Attempt = leased.Attempt });
+        core.OnLost(new LostEvent { Job = leased.Job.Name, Slot = leased.Slot, InstanceId = core.Settings.InstanceId, Attempt = leased.Attempt });
     }
 
     /// <summary>Gives back a run won after stop began; when that fails the lease runs out on its own.</summary>
-    private async Task ReleaseQuietlyAsync(ClaimInput input)
+    private async Task ReleaseQuietlyAsync(RunClaim claim)
     {
         try
         {
-            await runs.ReleaseAsync(input.Job, input.Slot, input.Token, CancellationToken.None).ConfigureAwait(false);
+            await runs.ReleaseAsync(claim.Job, claim.Slot, claim.Token, CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception)
         {
@@ -367,7 +358,7 @@ internal sealed class LeaseRunner(ISchedulerCore core, Executor executor, IRunSt
 
         try
         {
-            await Task.Delay(TimeSpan.FromMilliseconds(ms), core.Time, stop).ConfigureAwait(false);
+            await Task.Delay(TimeSpan.FromMilliseconds(ms), core.Settings.Time, stop).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {

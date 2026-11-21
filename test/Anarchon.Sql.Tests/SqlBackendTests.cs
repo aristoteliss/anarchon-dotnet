@@ -162,6 +162,25 @@ public sealed class SqlBackendTests
     }
 
     [Fact]
+    public async Task a_claim_refused_as_an_overlap_writes_nothing_and_names_the_earliest_live_run()
+    {
+        var backend = new EmbeddedBackend(Embedded.NewFile("overlap"));
+        var runs = backend.Runs;
+        await backend.InitAsync(CancellationToken.None);
+        var shortLease = Run(1_000, "A", ClaimMode.New) with { Lease = TimeSpan.FromMilliseconds(200), Overlap = OverlapPolicy.Allow };
+        await runs.ClaimAsync(shortLease, CancellationToken.None);
+        await runs.ClaimAsync(Run(2_000, "A", ClaimMode.New) with { Overlap = OverlapPolicy.Allow }, CancellationToken.None);
+        await Task.Delay(TimeSpan.FromMilliseconds(400));
+
+        var refused = await runs.ClaimAsync(Run(3_000, "A", ClaimMode.New), CancellationToken.None);
+        var active = await runs.ActiveAsync("job", CancellationToken.None);
+        await backend.CloseAsync();
+
+        Assert.Equal(new ClaimOutcome.Overlap(2_000), refused);
+        Assert.Equal([(1_000L, false), (2_000L, true)], active.Select(run => (run.Slot, run.IsAlive)));
+    }
+
+    [Fact]
     public async Task a_table_another_instance_created_at_the_same_moment_does_not_stop_start_when_the_dialect_says_so()
     {
         var file = Embedded.NewFile("created");

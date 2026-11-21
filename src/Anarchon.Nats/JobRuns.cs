@@ -3,6 +3,7 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Anarchon.Backends;
 
 namespace Anarchon.Nats;
 
@@ -95,7 +96,7 @@ internal sealed class StoredRun(JsonObject raw)
     public bool IsRunning => Status == "running";
 
     /// <summary>The first attempt of a run, with a lease from now.</summary>
-    public static StoredRun First(Anarchon.Backends.RunClaim claim, long now) => new(new JsonObject
+    public static StoredRun First(RunClaim claim, long now) => new(new JsonObject
     {
         ["a"] = 1,
         ["m"] = claim.MaxAttempts,
@@ -105,8 +106,28 @@ internal sealed class StoredRun(JsonObject raw)
         ["l"] = now + (long)claim.Lease.TotalMilliseconds,
     });
 
+    /// <summary>The next attempt of this run, for the instance that takes it over, with a lease from now.</summary>
+    public StoredRun TakenOver(RunClaim claim, int attempt, int maxAttempts, long now) => With(
+        ("a", attempt),
+        ("m", maxAttempts),
+        ("t", claim.Token),
+        ("i", claim.InstanceId),
+        ("l", now + (long)claim.Lease.TotalMilliseconds));
+
+    /// <summary>This run with its lease moved to <paramref name="leaseEnd"/>.</summary>
+    public StoredRun Renewed(long leaseEnd) => With(("l", leaseEnd));
+
+    /// <summary>This run finished with <paramref name="status"/>; a finished run holds no lease.</summary>
+    public StoredRun Ended(RunStatus status) => With(("s", RunText.ToText(status)), ("l", 0));
+
+    /// <summary>This run given up: no instance retries it. Its other fields stay as they are.</summary>
+    public StoredRun Interrupted() => With(("s", "interrupted"));
+
+    /// <summary>This run with its lease given back and one more hand-over counted.</summary>
+    public StoredRun HandedOver() => With(("l", 0), ("r", Released + 1));
+
     /// <summary>A copy with these fields set; every other field is kept.</summary>
-    public StoredRun With(params (string Name, JsonNode? Value)[] fields)
+    private StoredRun With(params (string Name, JsonNode? Value)[] fields)
     {
         var copy = (JsonObject)raw.DeepClone();
         foreach (var (name, value) in fields)

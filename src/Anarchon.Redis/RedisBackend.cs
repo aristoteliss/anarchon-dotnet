@@ -50,9 +50,7 @@ public sealed class RedisBackend : IBackend
     private readonly string? _configuration;
     private readonly IConnectionMultiplexer? _connection;
     private readonly int _database;
-    private readonly long _idmpDurationSec;
-    private readonly int _idmpMaxSize;
-    private readonly long _scriptWindowMs;
+    private readonly IClaimStrategy _claims;
     private readonly LeaseStore? _lease;
     private readonly Lock _gate = new();
     private Task<IConnectionMultiplexer>? _owned;
@@ -87,10 +85,7 @@ public sealed class RedisBackend : IBackend
         }
 
         RefuseOtherStrategySettings(options);
-        _idmpDurationSec = (long)(options.IdmpDuration ?? DefaultWindow).TotalSeconds;
-        _idmpMaxSize = options.IdmpMaxSize ?? 1_000;
-        _scriptWindowMs = (long)(options.ScriptWindow ?? DefaultWindow).TotalMilliseconds;
-        RefuseOutOfRange(options);
+        _claims = CreateStrategy(options);
 
         Strategy = options.Strategy;
         _prefix = options.Prefix ?? throw new ArgumentException("Prefix must not be null", nameof(options));
@@ -107,12 +102,7 @@ public sealed class RedisBackend : IBackend
     public RedisStrategy Strategy { get; }
 
     /// <summary>Forever for Lease and StreamId; <see cref="RedisBackendOptions.IdmpDuration"/> for Idmp; <see cref="RedisBackendOptions.ScriptWindow"/> for Script.</summary>
-    public TimeSpan DedupeWindow => Strategy switch
-    {
-        RedisStrategy.Idmp => TimeSpan.FromSeconds(_idmpDurationSec),
-        RedisStrategy.Script => TimeSpan.FromMilliseconds(_scriptWindowMs),
-        _ => TimeSpan.MaxValue,
-    };
+    public TimeSpan DedupeWindow => _claims.DedupeWindow;
 
     /// <summary>The run store, with the Lease strategy only.</summary>
     public IRunStore? Runs => _lease;
@@ -130,25 +120,7 @@ public sealed class RedisBackend : IBackend
     public void CheckJob(JobLimits job)
     {
         ArgumentNullException.ThrowIfNull(job);
-        var neededMs = (long)(job.Jitter + job.MaxLate).TotalMilliseconds;
-        var minGapMs = job.MinGap == TimeSpan.MaxValue ? long.MaxValue : (long)job.MinGap.TotalMilliseconds;
-
-        // The server must still remember a run while late instances may try to claim it. (Lease needs
-        // no such check: it never forgets a run that a late claim could still ask for.)
-        if (Strategy == RedisStrategy.Idmp && Covers(_idmpMaxSize, minGapMs) <= neededMs)
-        {
-            throw Unsafe(job, $"IdmpMaxSize ({_idmpMaxSize}) runs × {minGapMs} ms between runs must cover Jitter + MaxLate ({neededMs} ms)");
-        }
-
-        if (Strategy == RedisStrategy.Script && job.HistoryTtl is { } ttl && ttl.TotalMilliseconds <= _scriptWindowMs)
-        {
-            throw Unsafe(job, $"HistoryTtl must be longer than the Script strategy's window ({_scriptWindowMs} ms)");
-        }
-
-        if (Strategy == RedisStrategy.Script && Covers(job.HistorySize, minGapMs) <= neededMs)
-        {
-            throw Unsafe(job, $"HistorySize ({job.HistorySize}) runs × {minGapMs} ms between runs must cover Jitter + MaxLate ({neededMs} ms) for the Script strategy");
-        }
+        _claims.CheckJob(job);
     }
 
     /// <summary>Connects, checks the server against the strategy, and checks the keys' store format.</summary>
@@ -283,9 +255,7 @@ public sealed class RedisBackend : IBackend
         }
     }
 
-    private Task<IDatabase> DatabaseAsync() => DatabaseOfAsync();
-
-    private async Task<IDatabase> DatabaseOfAsync()
+    private async Task<IDatabase> DatabaseAsync()
     {
         var connection = _connection ?? await ConnectAsync().ConfigureAwait(false);
         return connection.GetDatabase(_database);
@@ -309,23 +279,16 @@ public sealed class RedisBackend : IBackend
     {
         lock (_gate)
         {
-            if (_strategy is null || _strategy.IsFaulted || _strategy.IsCanceled) _strategy = CreateStrategyAsync();
+            if (_strategy is null || _strategy.IsFaulted || _strategy.IsCanceled) _strategy = InitStrategyAsync();
             return _strategy;
         }
     }
 
-    private async Task<IClaimStrategy> CreateStrategyAsync()
+    private async Task<IClaimStrategy> InitStrategyAsync()
     {
-        IClaimStrategy strategy = Strategy switch
-        {
-            RedisStrategy.Idmp => new IdmpStrategy(_idmpDurationSec, _idmpMaxSize),
-            RedisStrategy.Script => new ScriptStrategy(_scriptWindowMs),
-            _ => new StreamIdStrategy(),
-        };
-
         var db = await DatabaseAsync().ConfigureAwait(false);
-        await strategy.InitAsync(db).ConfigureAwait(false);
-        return strategy;
+        await _claims.InitAsync(db).ConfigureAwait(false);
+        return _claims;
     }
 
     /// <summary>Drops results and claims older than the age limit (XTRIM MINID needs Redis 6.2+; older servers keep the count limit only).</summary>
@@ -375,15 +338,23 @@ public sealed class RedisBackend : IBackend
         throw new ArgumentException($"The {strategy} strategy has no setting {misplaced}", nameof(options));
     }
 
-    private void RefuseOutOfRange(RedisBackendOptions options)
+    /// <summary>The claim strategy with its settings, or their defaults. Lease claims plain runs like StreamId.</summary>
+    private static IClaimStrategy CreateStrategy(RedisBackendOptions options)
     {
-        if (_idmpDurationSec is < 1 or > 86_400) throw new ArgumentOutOfRangeException(nameof(options), $"IdmpDuration must be from 1 second to 1 day (got {options.IdmpDuration})");
-        if (_idmpMaxSize is < 1 or > MaxIdmpSize) throw new ArgumentOutOfRangeException(nameof(options), $"IdmpMaxSize must be from 1 to {MaxIdmpSize} (got {_idmpMaxSize})");
-        if (_scriptWindowMs < 1) throw new ArgumentOutOfRangeException(nameof(options), $"ScriptWindow must be at least 1 ms (got {options.ScriptWindow})");
+        var idmpDurationSec = (long)(options.IdmpDuration ?? DefaultWindow).TotalSeconds;
+        var idmpMaxSize = options.IdmpMaxSize ?? 1_000;
+        var scriptWindowMs = (long)(options.ScriptWindow ?? DefaultWindow).TotalMilliseconds;
+
+        if (idmpDurationSec is < 1 or > 86_400) throw new ArgumentOutOfRangeException(nameof(options), $"IdmpDuration must be from 1 second to 1 day (got {options.IdmpDuration})");
+        if (idmpMaxSize is < 1 or > MaxIdmpSize) throw new ArgumentOutOfRangeException(nameof(options), $"IdmpMaxSize must be from 1 to {MaxIdmpSize} (got {idmpMaxSize})");
+        if (scriptWindowMs < 1) throw new ArgumentOutOfRangeException(nameof(options), $"ScriptWindow must be at least 1 ms (got {options.ScriptWindow})");
         if (!Enum.IsDefined(options.Strategy)) throw new ArgumentOutOfRangeException(nameof(options), $"Unknown strategy {options.Strategy}");
+
+        return options.Strategy switch
+        {
+            RedisStrategy.Idmp => new IdmpStrategy(idmpDurationSec, idmpMaxSize),
+            RedisStrategy.Script => new ScriptStrategy(scriptWindowMs),
+            _ => new StreamIdStrategy(),
+        };
     }
-
-    private static long Covers(long runs, long gapMs) => gapMs > long.MaxValue / Math.Max(runs, 1) ? long.MaxValue : runs * gapMs;
-
-    private static AnarchonException Unsafe(JobLimits job, string reason) => new(AnarchonErrorCode.UnsafeJob, $"Job \"{job.Name}\": {reason}");
 }

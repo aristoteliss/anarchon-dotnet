@@ -154,6 +154,110 @@ public sealed class SchedulerTests
     }
 
     [Fact]
+    public async Task a_start_that_fails_while_stop_waits_for_runs_does_not_end_the_stop()
+    {
+        var backend = new MemoryBackend();
+        var scheduler = new Scheduler(new SchedulerOptions { Backend = backend, StopTimeout = TimeSpan.FromMinutes(1) });
+        var entered = new TaskCompletionSource();
+        var stuck = new TaskCompletionSource();
+        scheduler.Cron("slow", "0 8 * * *", async _ =>
+        {
+            entered.TrySetResult();
+            await stuck.Task;
+        });
+        await scheduler.StartAsync();
+        var run = scheduler.RunNowAsync("slow");
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await scheduler.StopAsync(new CancellationToken(canceled: true));
+
+        var connect = new TaskCompletionSource();
+        backend.InitGate = connect.Task;
+        var start = scheduler.StartAsync();
+        using var release = new CancellationTokenSource();
+        var stop = scheduler.StopAsync(release.Token);
+        await UntilStoppingAsync(scheduler);
+        backend.InitFailure = new InvalidOperationException("unreachable");
+        connect.SetResult();
+        await Assert.ThrowsAsync<InvalidOperationException>(() => start);
+        backend.InitGate = null;
+        backend.InitFailure = null;
+
+        var refused = await Assert.ThrowsAsync<AnarchonException>(() => scheduler.StartAsync());
+
+        Assert.Equal(AnarchonErrorCode.State, refused.Code);
+        await release.CancelAsync();
+        await stop;
+        stuck.SetResult();
+        await run;
+    }
+
+    private static async Task UntilStoppingAsync(Scheduler scheduler)
+    {
+        using var limit = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        while (true)
+        {
+            var refused = await Assert.ThrowsAsync<AnarchonException>(() => scheduler.StartAsync());
+            if (refused.Message.Contains("stopping", StringComparison.Ordinal)) return;
+
+            await Task.Delay(TimeSpan.FromMilliseconds(10), limit.Token);
+        }
+    }
+
+    [Fact]
+    public async Task a_manual_run_starts_as_manual_and_lasts_from_the_handler_start_to_its_end()
+    {
+        await using var scheduler = new Scheduler(new SchedulerOptions { Backend = new MemoryBackend() });
+        var started = new TaskCompletionSource<RunStartEvent>();
+        scheduler.Started += (_, e) => started.TrySetResult(e);
+        scheduler.Every("export", TimeSpan.FromHours(1), _ => Task.Delay(TimeSpan.FromMilliseconds(100)));
+        await scheduler.StartAsync();
+
+        var run = await scheduler.RunNowAsync("export");
+
+        Assert.True((await started.Task.WaitAsync(TimeSpan.FromSeconds(5))).IsManual);
+        Assert.InRange(run.Duration ?? TimeSpan.Zero, TimeSpan.FromMilliseconds(100), TimeSpan.FromMinutes(1));
+    }
+
+    [Fact]
+    public async Task an_error_is_kept_as_type_and_message_cut_after_2000_characters()
+    {
+        const string type = "InvalidOperationException: ";
+        await using var scheduler = new Scheduler(new SchedulerOptions { Backend = new MemoryBackend() });
+        scheduler.Every("full", TimeSpan.FromHours(1), _ => throw new InvalidOperationException(new string('a', 2_000 - type.Length)));
+        scheduler.Every("over", TimeSpan.FromHours(1), _ => throw new InvalidOperationException(new string('a', 2_001 - type.Length)));
+        await scheduler.StartAsync();
+
+        var full = await scheduler.RunNowAsync("full");
+        var over = await scheduler.RunNowAsync("over");
+
+        Assert.Equal(type + new string('a', 2_000 - type.Length), full.Error);
+        Assert.Equal(type + new string('a', 2_000 - type.Length) + "…", over.Error);
+    }
+
+    [Fact]
+    public async Task a_job_added_while_the_scheduler_runs_is_scheduled_at_once()
+    {
+        await using var scheduler = new Scheduler(new SchedulerOptions { Backend = new MemoryBackend() });
+        await scheduler.StartAsync();
+
+        scheduler.Every("late", TimeSpan.FromHours(1), _ => Task.CompletedTask);
+
+        Assert.NotNull(scheduler.GetNextRun("late"));
+    }
+
+    [Fact]
+    public async Task history_reads_from_1_to_10000_runs_and_refuses_other_limits()
+    {
+        await using var scheduler = new Scheduler(new SchedulerOptions { Backend = new MemoryBackend() });
+
+        await scheduler.HistoryAsync("sync", 1);
+        await scheduler.HistoryAsync("sync", 10_000);
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => scheduler.HistoryAsync("sync", 0));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => scheduler.HistoryAsync("sync", 10_001));
+    }
+
+    [Fact]
     public async Task a_read_after_stop_opens_the_backend_for_itself_and_closes_it_again()
     {
         var backend = new MemoryBackend();

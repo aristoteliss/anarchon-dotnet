@@ -7,10 +7,17 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Anarchon.Scheduling;
 
 /// <summary>The options of a scheduler, checked and with their defaults applied.</summary>
+/// <param name="Backend">Where runs are claimed and recorded.</param>
+/// <param name="InstanceId">This instance's name: the runner in its claims, and the instance in events and history.</param>
+/// <param name="Defaults">The values a job takes when its own options set none.</param>
+/// <param name="LeaseMs">Lease backends: how long a lease lasts without a heartbeat, in ms.</param>
+/// <param name="HeartbeatMs">Lease backends: how often a runner renews its lease, in ms; backups check every 1 to 2 of these.</param>
+/// <param name="StopTimeout">How long stop waits for the runs in progress.</param>
+/// <param name="Logger">Where the scheduler logs.</param>
+/// <param name="Time">The clock and the timers of the scheduler.</param>
 internal sealed record SchedulerSettings(
     IBackend Backend,
     string InstanceId,
-    object? Data,
     SchedulerDefaults Defaults,
     long LeaseMs,
     long HeartbeatMs,
@@ -47,7 +54,7 @@ internal static class Settings
 
         var logger = options.LoggerFactory?.CreateLogger("Anarchon.Scheduler") ?? NullLogger.Instance;
         var time = options.TimeProvider ?? TimeProvider.System;
-        return new SchedulerSettings(backend, instanceId, options.Data, defaults, leaseMs, heartbeatMs, options.StopTimeout, logger, time);
+        return new SchedulerSettings(backend, instanceId, defaults, leaseMs, heartbeatMs, options.StopTimeout, logger, time);
     }
 
     public static int Positive(string label, int value) =>

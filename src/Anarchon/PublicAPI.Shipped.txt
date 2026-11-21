@@ -536,6 +536,7 @@ static Anarchon.Backends.JobLimits.operator ==(Anarchon.Backends.JobLimits? left
 static Anarchon.Backends.RunClaim.operator !=(Anarchon.Backends.RunClaim? left, Anarchon.Backends.RunClaim? right) -> bool
 static Anarchon.Backends.RunClaim.operator ==(Anarchon.Backends.RunClaim? left, Anarchon.Backends.RunClaim? right) -> bool
 static Anarchon.Backends.RunHistory.Build(string! job, System.Collections.Generic.IEnumerable<Anarchon.Backends.ClaimRecord!>! claims, System.Collections.Generic.IEnumerable<Anarchon.Backends.StoredResult!>! results, int limit, System.Func<Anarchon.Backends.ClaimRecord!, Anarchon.RunStatus>? pendingStatus = null) -> System.Collections.Generic.IReadOnlyList<Anarchon.RunRecord!>!
+static Anarchon.Backends.RunHistory.PendingStatus(string? runStatus, bool isCurrentAttempt, long leaseEnd, long now) -> Anarchon.RunStatus
 static Anarchon.Backends.StoredResult.operator !=(Anarchon.Backends.StoredResult? left, Anarchon.Backends.StoredResult? right) -> bool
 static Anarchon.Backends.StoredResult.operator ==(Anarchon.Backends.StoredResult? left, Anarchon.Backends.StoredResult? right) -> bool
 static Anarchon.Backends.StoreFormat.Check(string? found, string! where) -> void

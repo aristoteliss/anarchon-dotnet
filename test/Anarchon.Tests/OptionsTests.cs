@@ -1,5 +1,7 @@
 // Copyright (C) 2026-present Aristotelis — see repository license.
 
+using Anarchon.Backends;
+
 namespace Anarchon.Tests;
 
 public sealed class OptionsTests
@@ -62,6 +64,18 @@ public sealed class OptionsTests
     }
 
     [Fact]
+    public void a_refused_job_timing_names_the_options_parameter()
+    {
+        var scheduler = new Scheduler(new SchedulerOptions { Backend = new MemoryBackend() });
+
+        var jitter = Assert.Throws<ArgumentOutOfRangeException>(() => scheduler.Every("spread", TimeSpan.FromSeconds(10), Nothing, new() { Jitter = TimeSpan.FromSeconds(5) }));
+        var late = Assert.Throws<ArgumentOutOfRangeException>(() => scheduler.Every("late", TimeSpan.FromMinutes(1), Nothing, new() { Jitter = TimeSpan.FromSeconds(5), MaxLate = TimeSpan.FromSeconds(5) }));
+
+        Assert.Equal("options", jitter.ParamName);
+        Assert.Equal("options", late.ParamName);
+    }
+
+    [Fact]
     public void the_default_jitter_is_lowered_to_a_quarter_of_a_short_interval()
     {
         var scheduler = new Scheduler(new SchedulerOptions { Backend = new MemoryBackend(), Jitter = TimeSpan.FromSeconds(5) });
@@ -83,6 +97,68 @@ public sealed class OptionsTests
         Assert.True(scheduler.Remove("sync"));
         Assert.False(scheduler.Remove("sync"));
     }
+
+    [Fact]
+    public void a_backend_checks_the_job_settings_or_the_scheduler_defaults_where_the_job_sets_none()
+    {
+        var backend = new MemoryBackend();
+        var scheduler = new Scheduler(new SchedulerOptions
+        {
+            Backend = backend,
+            Jitter = TimeSpan.FromSeconds(2),
+            MaxLate = TimeSpan.FromSeconds(3),
+            HistorySize = 9,
+            HistoryTtl = TimeSpan.FromHours(2),
+        });
+
+        scheduler.Every("own", TimeSpan.FromMinutes(1), Nothing, new() { Jitter = TimeSpan.FromSeconds(5), MaxLate = TimeSpan.FromSeconds(8), HistorySize = 7, HistoryTtl = TimeSpan.FromHours(1) });
+        scheduler.Every("defaults", TimeSpan.FromMinutes(1), Nothing);
+        scheduler.Every("wide", TimeSpan.FromMinutes(1), Nothing, new() { Jitter = TimeSpan.FromSeconds(10) });
+        scheduler.At("once", DateTimeOffset.UtcNow.AddHours(1), Nothing);
+
+        var limits = backend.Limits.ToDictionary(job => job.Name);
+        Assert.Equal((5_000d, 8_000d, 7, TimeSpan.FromHours(1), TimeSpan.FromMinutes(1)), Read(limits["own"]));
+        Assert.Equal((2_000d, 3_000d, 9, TimeSpan.FromHours(2), TimeSpan.FromMinutes(1)), Read(limits["defaults"]));
+        Assert.Equal(11_000d, limits["wide"].MaxLate.TotalMilliseconds);
+        Assert.Equal(TimeSpan.MaxValue, limits["once"].MinGap);
+    }
+
+    [Fact]
+    public void max_attempts_from_1_to_100_and_a_catch_up_of_zero_or_more_are_kept_and_other_values_are_refused()
+    {
+        var scheduler = new Scheduler(new SchedulerOptions { Backend = new LeaseBackendStub() });
+
+        scheduler.Every("one", TimeSpan.FromMinutes(1), Nothing, new() { MaxAttempts = 1, CatchUp = TimeSpan.Zero });
+        scheduler.Every("hundred", TimeSpan.FromMinutes(1), Nothing, new() { MaxAttempts = 100 });
+        var none = Assert.Throws<ArgumentOutOfRangeException>(() => scheduler.Every("none", TimeSpan.FromMinutes(1), Nothing, new() { MaxAttempts = 0 }));
+        var many = Assert.Throws<ArgumentOutOfRangeException>(() => scheduler.Every("many", TimeSpan.FromMinutes(1), Nothing, new() { MaxAttempts = 101 }));
+        var past = Assert.Throws<ArgumentOutOfRangeException>(() => scheduler.Every("past", TimeSpan.FromMinutes(1), Nothing, new() { CatchUp = TimeSpan.FromSeconds(-1) }));
+
+        Assert.Equal(["hundred", "one"], scheduler.GetJobs().Select(job => job.Name).Order());
+        Assert.Equal("Job \"none\": MaxAttempts", none.ParamName);
+        Assert.Equal("Job \"many\": MaxAttempts", many.ParamName);
+        Assert.Equal("Job \"past\": CatchUp", past.ParamName);
+    }
+
+    [Fact]
+    public void a_negative_stop_timeout_is_refused() =>
+        Assert.Throws<ArgumentOutOfRangeException>(() => new Scheduler(new SchedulerOptions { Backend = new MemoryBackend(), StopTimeout = TimeSpan.FromSeconds(-1) }));
+
+    [Fact]
+    public void jitter_and_max_late_must_end_before_the_backend_forgets_a_run()
+    {
+        var scheduler = new Scheduler(new SchedulerOptions { Backend = new MemoryBackend { DedupeWindow = TimeSpan.FromSeconds(10) } });
+
+        scheduler.Every("inside", TimeSpan.FromMinutes(1), Nothing, new() { Jitter = TimeSpan.FromSeconds(4), MaxLate = TimeSpan.FromMilliseconds(5_999) });
+        var edge = Assert.Throws<AnarchonException>(() => scheduler.Every("edge", TimeSpan.FromMinutes(1), Nothing, new() { Jitter = TimeSpan.FromSeconds(4), MaxLate = TimeSpan.FromSeconds(6) }));
+
+        Assert.Equal(AnarchonErrorCode.UnsafeJob, edge.Code);
+        Assert.Contains("Jitter + MaxLate (10000 ms) must be shorter than how long memory remembers a run (10000 ms)", edge.Message, StringComparison.Ordinal);
+        Assert.Equal("inside", Assert.Single(scheduler.GetJobs()).Name);
+    }
+
+    private static (double JitterMs, double MaxLateMs, int HistorySize, TimeSpan? HistoryTtl, TimeSpan MinGap) Read(JobLimits job) =>
+        (job.Jitter.TotalMilliseconds, job.MaxLate.TotalMilliseconds, job.HistorySize, job.HistoryTtl, job.MinGap);
 
     private static AnarchonErrorCode Refused(Func<object?> act) => Assert.Throws<AnarchonException>(act).Code;
 

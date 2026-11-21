@@ -142,15 +142,6 @@ internal sealed class SqlHistory(SqlTables tables, SqlDialect dialect, OpenConne
     private static RunStatus PendingStatus(SqlRow row)
     {
         var current = !row.IsNull("current_attempt") && row.Int("current_attempt") == row.Int("attempt");
-        if (!current) return RunStatus.Interrupted;
-
-        var alive = row.Long("lease_until") >= row.Long("now");
-        return RunText.ToStatus(row.Text("current_status")) switch
-        {
-            RunStatus.Running when alive => RunStatus.Running,
-            RunStatus.Success => RunStatus.Success,
-            RunStatus.Failed => RunStatus.Failed,
-            _ => RunStatus.Interrupted,
-        };
+        return RunHistory.PendingStatus(row.Text("current_status"), current, row.Long("lease_until"), row.Long("now"));
     }
 }

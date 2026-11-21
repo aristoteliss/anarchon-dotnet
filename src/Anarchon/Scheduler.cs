@@ -3,7 +3,6 @@
 using System.Collections.Concurrent;
 using Anarchon.Backends;
 using Anarchon.Scheduling;
-using Microsoft.Extensions.Logging;
 
 namespace Anarchon;
 
@@ -45,9 +44,7 @@ public sealed partial class Scheduler : IAsyncDisposable, IDisposable
 {
     private const int MaxHistoryLimit = 10_000;
 
-    private readonly SchedulerDefaults _defaults;
-    private readonly ILogger _logger;
-    private readonly TimeSpan _stopTimeout;
+    private readonly SchedulerSettings _settings;
     private readonly Lock _gate = new();
     private readonly Dictionary<string, Job> _registry = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<Task, byte> _inflight = new();
@@ -83,16 +80,8 @@ public sealed partial class Scheduler : IAsyncDisposable, IDisposable
     /// </example>
     public Scheduler(SchedulerOptions options)
     {
-        var settings = Settings.Read(options);
-        Backend = settings.Backend;
-        InstanceId = settings.InstanceId;
-        LeaseMs = settings.LeaseMs;
-        HeartbeatMs = settings.HeartbeatMs;
-        Time = settings.Time;
-        _data = settings.Data;
-        _defaults = settings.Defaults;
-        _logger = settings.Logger;
-        _stopTimeout = settings.StopTimeout;
+        _settings = Settings.Read(options);
+        _data = options.Data;
 
         _executor = new Executor(this);
         _claimOnly = new ClaimOnlyRunner(this, _executor);
@@ -109,19 +98,13 @@ public sealed partial class Scheduler : IAsyncDisposable, IDisposable
     }
 
     /// <summary>This instance's name in history and events. Default <c>machine:pid</c>.</summary>
-    public string InstanceId { get; }
+    public string InstanceId => _settings.InstanceId;
 
     /// <summary>
     /// Where runs are claimed and recorded, as given in the options. Its <see cref="IBackend.Name"/>
     /// tells which one, such as <c>redis:lease</c>.
     /// </summary>
-    public IBackend Backend { get; }
-
-    private long LeaseMs { get; }
-
-    private long HeartbeatMs { get; }
-
-    private TimeProvider Time { get; }
+    public IBackend Backend => _settings.Backend;
 
     /// <summary>
     /// Connects to the backend and starts scheduling. Jobs can be added before or after. Calling it
@@ -165,7 +148,12 @@ public sealed partial class Scheduler : IAsyncDisposable, IDisposable
         }
         catch
         {
-            _state = State.Idle;
+            lock (_gate)
+            {
+                // A stop that began meanwhile owns the state until it returns.
+                if (_state == State.Starting) _state = State.Idle;
+            }
+
             await CloseBackendAsync().ConfigureAwait(false);
             throw;
         }
@@ -293,7 +281,7 @@ public sealed partial class Scheduler : IAsyncDisposable, IDisposable
         var settled = Task.WhenAll(pending.Select(task => task.ContinueWith(static _ => { }, TaskScheduler.Default)));
         try
         {
-            await settled.WaitAsync(_stopTimeout, Time, cancellationToken).ConfigureAwait(false);
+            await settled.WaitAsync(_settings.StopTimeout, _settings.Time, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception error) when (error is TimeoutException or OperationCanceledException)
         {
@@ -341,7 +329,7 @@ public sealed partial class Scheduler : IAsyncDisposable, IDisposable
         }
         catch (Exception error)
         {
-            Log.CloseFailed(_logger, Backend.Name, error);
+            Log.CloseFailed(_settings.Logger, Backend.Name, error);
         }
     }
 
@@ -389,5 +377,5 @@ public sealed partial class Scheduler : IAsyncDisposable, IDisposable
         }
     }
 
-    private long Now() => Time.GetUtcNow().ToUnixTimeMilliseconds();
+    private long Now() => _settings.Time.GetUtcNow().ToUnixTimeMilliseconds();
 }

@@ -12,6 +12,9 @@ namespace Anarchon.Sql;
 /// </summary>
 internal sealed class SqlRunStore(SqlTables tables, SqlDialect dialect, OpenConnection open, SqlHistory history) : IRunStore
 {
+    /// <summary>The columns of a run's row that a claim decides from.</summary>
+    private const string RunColumns = "attempt, max_attempts, released, token, status, lease_until";
+
     public async Task<ClaimOutcome> ClaimAsync(RunClaim claim, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(claim);
@@ -104,14 +107,18 @@ internal sealed class SqlRunStore(SqlTables tables, SqlDialect dialect, OpenConn
     /// </summary>
     private async Task<ClaimOutcome?> TakeoverWithoutWritingAsync(SqlSession session, RunClaim claim)
     {
-        var sql = $"SELECT attempt, token, status, lease_until, {dialect.NowMs} AS now FROM {tables.Runs} WHERE job = @job AND slot = @slot";
+        var sql = $"SELECT {RunColumns}, {dialect.NowMs} AS now FROM {tables.Runs} WHERE job = @job AND slot = @slot";
         var row = await session.QueryFirstAsync(sql, ("job", claim.Job), ("slot", claim.Slot)).ConfigureAwait(false);
 
         if (row is null) return new ClaimOutcome.None();
-        if (row.Text("token") == claim.Token) return null;
-        if (row.Text("status") != "running") return new ClaimOutcome.Done();
-        if (row.Long("lease_until") >= row.Long("now")) return new ClaimOutcome.Running(row.Int("attempt"));
-        return null; // the lease ran out: the transaction decides who takes over
+
+        var run = ToRunRow(row);
+        // Our own claim, sent again: the transaction answers it.
+        if (run.Token == claim.Token) return null;
+
+        // Any other step writes (the lease ran out): the transaction decides who takes over.
+        var step = ClaimStep.Decide(run, claim, row.Long("now"));
+        return step is ClaimStep.Answer answer ? answer.Outcome : null;
     }
 
     /// <summary>Performs the writes the decision asks for, and answers the claim.</summary>
@@ -136,11 +143,6 @@ internal sealed class SqlRunStore(SqlTables tables, SqlDialect dialect, OpenConn
     /// <summary>Inserts a new run, or says why it must not start.</summary>
     private async Task<ClaimOutcome?> StartRunAsync(SqlSession session, RunClaim claim, long now)
     {
-        // A claim delayed or queued during an outage must not start a stale run.
-        var lateMs = now - claim.Slot;
-        var maxLateMs = (long)(claim.MaxLate?.TotalMilliseconds ?? 0);
-        if (maxLateMs > 0 && lateMs > maxLateMs) return new ClaimOutcome.Late(TimeSpan.FromMilliseconds(lateMs));
-
         var refused = await SettleOtherRunsAsync(session, claim, now).ConfigureAwait(false);
         if (refused is not null) return refused;
 
@@ -153,20 +155,23 @@ internal sealed class SqlRunStore(SqlTables tables, SqlDialect dialect, OpenConn
         return null;
     }
 
-    /// <summary>Refuses to overlap a live run of the job, and ends older runs whose runner died.</summary>
+    /// <summary>
+    /// Refuses to overlap a live run of the job; otherwise ends older runs whose runner died. A refused
+    /// claim writes nothing.
+    /// </summary>
     private async Task<ClaimOutcome?> SettleOtherRunsAsync(SqlSession session, RunClaim claim, long now)
     {
         var sql = $"SELECT slot, lease_until FROM {tables.Runs}{dialect.LockHint} WHERE job = @job AND status = 'running'{dialect.ForUpdate}";
-        var others = await session.QueryAsync(sql, ("job", claim.Job)).ConfigureAwait(false);
+        var rows = await session.QueryAsync(sql, ("job", claim.Job)).ConfigureAwait(false);
+        var others = rows.Select(row => (Slot: row.Long("slot"), Alive: row.Long("lease_until") >= now)).ToList();
 
-        foreach (var other in others)
+        var live = others.Where(other => other.Alive).Select(other => other.Slot).ToList();
+        if (claim.Overlap == OverlapPolicy.Skip && live.Count > 0) return new ClaimOutcome.Overlap(live.Min());
+
+        // An older run died and a newer one is starting: stop trying to finish the old one.
+        foreach (var dead in others.Where(other => !other.Alive && other.Slot < claim.Slot))
         {
-            var slot = other.Long("slot");
-            var alive = other.Long("lease_until") >= now;
-            if (alive && claim.Overlap == OverlapPolicy.Skip) return new ClaimOutcome.Overlap(slot);
-
-            // An older run died and a newer one is starting: stop trying to finish the old one.
-            if (!alive && slot < claim.Slot) await InterruptAsync(session, claim.Job, slot).ConfigureAwait(false);
+            await InterruptAsync(session, claim.Job, dead.Slot).ConfigureAwait(false);
         }
 
         return null;
@@ -226,15 +231,21 @@ internal sealed class SqlRunStore(SqlTables tables, SqlDialect dialect, OpenConn
     private async Task<RunRow?> ReadRunAsync(SqlSession session, RunClaim claim)
     {
         var sql = $"""
-            SELECT attempt, max_attempts, released, token, status, lease_until
+            SELECT {RunColumns}
             FROM {tables.Runs}{dialect.LockHint}
             WHERE job = @job AND slot = @slot{dialect.ForUpdate}
             """;
         var row = await session.QueryFirstAsync(sql, ("job", claim.Job), ("slot", claim.Slot)).ConfigureAwait(false);
-        if (row is null) return null;
-
-        return new RunRow(row.Int("attempt"), row.Int("max_attempts"), row.Int("released"), row.Text("token") ?? "", row.Text("status") ?? "", row.Long("lease_until"));
+        return row is null ? null : ToRunRow(row);
     }
+
+    private static RunRow ToRunRow(SqlRow row) => new(
+        Attempt: row.Int("attempt"),
+        MaxAttempts: row.Int("max_attempts"),
+        Released: row.Int("released"),
+        Token: row.Text("token") ?? "",
+        Status: row.Text("status") ?? "",
+        LeaseUntil: row.Long("lease_until"));
 
     private async Task<bool> ChangedAsync(string sql, (string Name, object? Value)[] parameters, CancellationToken cancellationToken)
     {
