@@ -1,10 +1,15 @@
 # Changelog
 
-Versions follow the Node.js package in their first two numbers: Anarchon for .NET 0.6.x has the
-algorithm and the stored data of `anarchon` 0.6.x, so their instances can share jobs. The last number
+Versions follow the Node.js package in their first two numbers: Anarchon for .NET 0.7.x has the
+algorithm and the stored data of `anarchon` 0.7.x, so their instances can share jobs. The last number
 belongs to each package.
 
-## Unreleased
+## 0.7.0 (2026-11-21)
+
+The .NET counterpart of `anarchon` 0.7: the inside of the scheduler and of the backends is simpler
+to read and to change, and three bugs are fixed. No breaking change: the public API only gains a
+member, and the backend contract and the stored data are the same as 0.6.2, so 0.6.2 and 0.7.0
+instances, and Node.js instances of 0.6.2 to 0.7.1, can share a store during a rolling deploy.
 
 ### Added
 
@@ -21,7 +26,7 @@ belongs to each package.
   `ArgumentOutOfRangeException` (was the internal name `input`).
 - **`Anarchon.Nats`**: a `Prefix` that is not empty and does not end with a dot is refused with an
   `ArgumentException` when the backend is made. Before, start passed and every claim failed with
-  no reply from the server. The Node.js package does not make this check.
+  no reply from the server. The Node.js package makes the same check from 0.7.1.
 
 ### Changed
 
@@ -30,7 +35,21 @@ belongs to each package.
   not `AnarchonErrorCode.JobExists`.
 - **`Anarchon.Sql`**: a claim refused as an overlap writes nothing and reports the earliest live
   run. Before, it could end older dead runs first, in the order the database returned the rows;
-  those runs now end at the next claim that starts a run.
+  those runs now end at the next claim that starts a run. The Node.js package 0.7.1 has the same
+  fix.
+- **Internal structure.** No change to what the backends store or answer:
+  - `ISchedulerCore` names its lifecycle checks (`CanStart`, `CanWrite`), and the scheduler's parts
+    read one `SchedulerSettings` record. `LeaseRunner` builds every lease claim in one place.
+  - `Cron()`, `Every()`, `At()` and `Register()` add jobs through one path.
+  - Each Redis claim strategy holds its own settings and job checks; `RedisBackend` no longer
+    branches on the strategy.
+  - The NATS backend builds every subject name in one place, and the lease rules no longer write
+    the stored JSON field names.
+  - The SQL claim rules are in `ClaimStep.Decide`, and `SqlTables` creates the tables and checks
+    the store format.
+- **Dependencies.** StackExchange.Redis 3.4.35 (was 3.4.31), Npgsql 10.0.4 (was 10.0.3),
+  NATS.Client.KeyValueStore 3.4.1 (was 3.3.2), Microsoft.Data.SqlClient 7.1.2 (was 7.1.1), and
+  Microsoft.Data.Sqlite and Microsoft.Extensions.* 10.0.15 (was 10.0.14).
 
 ## 0.6.2 (2026-11-10)
 
